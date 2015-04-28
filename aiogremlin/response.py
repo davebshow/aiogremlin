@@ -1,10 +1,9 @@
 """
-gizmo.response
-
-This module defines parsers for the Gremlin Server response.
+THIS MODULE WILL BE REMOVED
 """
 
 class GremlinResponse(list):
+
     def __init__(self, message):
         """
         A subclass of list that parses and flattens the Gremlin Server's

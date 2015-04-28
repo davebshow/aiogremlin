@@ -27,6 +27,7 @@ def gremlin_response_parser(connection):
         finally:
             yield from connection.release()
 
+
 class GremlinWriter:
 
     def __init__(self, connection):

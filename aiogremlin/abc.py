@@ -1,8 +1,7 @@
-import asyncio
 from abc import ABCMeta, abstractmethod
 
 
-class AbstractBaseFactory(metaclass=ABCMeta):
+class AbstractFactory(metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
@@ -10,30 +9,25 @@ class AbstractBaseFactory(metaclass=ABCMeta):
         pass
 
     @property
+    @abstractmethod
     def factory(self):
-        return self
+        pass
 
 
-class AbstractBaseConnection(metaclass=ABCMeta):
+class AbstractConnection(metaclass=ABCMeta):
 
-    def __init__(self, socket, pool=None):
-        self.socket = socket
-        self._pool = pool
-
+    @abstractmethod
     def feed_pool(self):
-        if self.pool:
-            if self in self.pool.active_conns:
-                self.pool.feed_pool(self)
+        pass
 
-    @asyncio.coroutine
+    @abstractmethod
     def release(self):
-        yield from self.close()
-        if self in self.pool.active_conns:
-            self.pool.active_conns.discard(self)
+        pass
 
     @property
+    @abstractmethod
     def pool(self):
-        return self._pool
+        pass
 
     @property
     @abstractmethod

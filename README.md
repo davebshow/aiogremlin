@@ -17,11 +17,11 @@ Fire up the Gremlin Server:
 $ ./bin/gremlin-server.sh
 ```
 
-The `AsyncGremlinClient` communicates asynchronously with the Gremlin Server using websockets. The client uses a combination of [asyncio.coroutine](https://docs.python.org/3/library/asyncio-task.html#coroutines) and  [asyncio.Task](https://docs.python.org/3/library/asyncio-task.html#task) run on Asyncio's pluggable event loop to achieve this communication.
+The `GremlinClient` communicates asynchronously with the Gremlin Server using websockets. The client uses a combination of [asyncio.coroutine](https://docs.python.org/3/library/asyncio-task.html#coroutines) and  [asyncio.Task](https://docs.python.org/3/library/asyncio-task.html#task) run on Asyncio's pluggable event loop to achieve this communication.
 
-The majority of ``AsyncGremlinClient`` methods are an `asyncio.coroutine`, so you will also need to use either `asyncio` or the `aiogremlin` [Task API](#task-api). The following examples use `asyncio` to demonstrate the use of the AsyncioGremlineClient.
+The majority of `GremlinClient` methods are an `asyncio.coroutine`, so you will also need to use either `asyncio` or the `aiogremlin` [Task API](#task-api). The following examples use `asyncio` to demonstrate the use of the AsyncioGremlineClient.
 
-The Gremlin Server sends responses in chunks, so `AsyncGremlinClient.submit` returns a list of gremlin response objects:
+The Gremlin Server sends responses in chunks, so `GremlinClient.submit` returns a list of gremlin response objects:
 
 ```python
 >>> import asyncio

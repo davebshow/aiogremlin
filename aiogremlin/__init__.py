@@ -1,4 +1,4 @@
-from .abc import AbstractBaseFactory, AbstractBaseConnection
+from .abc import AbstractFactory, AbstractConnection
 from .connection import WebsocketPool, AiohttpFactory
 from .client import GremlinClient
 from .contextmanager import GremlinContext

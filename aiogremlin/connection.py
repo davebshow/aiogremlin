@@ -4,7 +4,7 @@ import asyncio
 
 import aiohttp
 
-from .abc import AbstractBaseFactory, AbstractBaseConnection
+from .abc import AbstractFactory, AbstractConnection
 from .exceptions import SocketClientError
 from .log import INFO, conn_logger
 
@@ -41,6 +41,8 @@ class WebsocketPool:
         return len(self.active_conns)
 
     def feed_pool(self, conn):
+        if self._closed:
+            raise RuntimeError("WebsocketPool is closed.")
         self.active_conns.discard(conn)
         self._put(conn)
 
@@ -70,6 +72,8 @@ class WebsocketPool:
 
     @asyncio.coroutine
     def connect(self, uri=None, loop=None, num_retries=None):
+        if self._closed:
+            raise RuntimeError("WebsocketPool is closed.")
         if num_retries is None:
             num_retries = self.max_retries
         uri = uri or self.uri
@@ -111,7 +115,14 @@ class WebsocketPool:
             pass
 
 
-class AiohttpFactory(AbstractBaseFactory):
+class BaseFactory(AbstractFactory):
+
+    @property
+    def factory(self):
+        return self
+
+
+class AiohttpFactory(BaseFactory):
 
     @classmethod
     @asyncio.coroutine
@@ -128,13 +139,34 @@ class AiohttpFactory(AbstractBaseFactory):
         return AiohttpConnection(socket, pool)
 
 
-class AiohttpConnection(AbstractBaseConnection):
+class BaseConnection(AbstractConnection):
+
+    def __init__(self, socket, pool=None):
+        self.socket = socket
+        self._pool = pool
+
+    def feed_pool(self):
+        if self.pool:
+            if self in self.pool.active_conns:
+                self.pool.feed_pool(self)
+
+    @asyncio.coroutine
+    def release(self):
+        try:
+            yield from self.close()
+        finally:
+            if self in self.pool.active_conns:
+                self.pool.active_conns.discard(self)
+
+    @property
+    def pool(self):
+        return self._pool
+
+
+class AiohttpConnection(BaseConnection):
 
     def __init__(self, socket, pool=None):
         super().__init__(socket, pool=pool)
-
-    def __str__(self):
-        return "{} wrapping {}".format(repr(self), repr(self.socket))
 
     @property
     def closed(self):
@@ -142,7 +174,11 @@ class AiohttpConnection(AbstractBaseConnection):
 
     @asyncio.coroutine
     def close(self):
-        yield from self.socket.close()
+        if not self.socket._closed:
+            try:
+                yield from self.socket.close()
+            finally:
+                self._closed = True
 
     @asyncio.coroutine
     def send(self, message, binary=True):
@@ -189,7 +225,7 @@ class AiohttpConnection(AbstractBaseConnection):
                     elif message.tp == aiohttp.MsgType.error:
                         raise SocketClientError(self.socket.exception())
                     elif message.tp == aiohttp.MsgType.closed:
-                        raise SocketClientError("Socket closed.")
+                        raise RuntimeError("Socket closed.")
                     break
                 finally:
                     yield from self.release()
