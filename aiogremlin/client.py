@@ -5,11 +5,9 @@ import json
 import ssl
 import uuid
 
-from .connection import WebsocketPool
-from .log import client_logger
-from .protocol import gremlin_response_parser, GremlinWriter
-from .response import GremlinResponse
-from .tasks import async
+from aiogremlin.connection import WebsocketPool
+from aiogremlin.log import client_logger
+from aiogremlin.protocol import gremlin_response_parser, GremlinWriter
 
 
 class GremlinBase:
@@ -118,7 +116,6 @@ class GremlinClient(GremlinBase):
             message = yield from self.recv(connection)
             if message is None:
                 break
-            message = GremlinResponse(message)
             if consumer:
                 message = consumer(message)
                 if asyncio.iscoroutine(message):

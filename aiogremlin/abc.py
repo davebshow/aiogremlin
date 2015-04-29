@@ -1,3 +1,5 @@
+"""Abstract classes for creating pluggable websocket clients."""
+
 from abc import ABCMeta, abstractmethod
 
 

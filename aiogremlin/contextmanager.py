@@ -1,6 +1,6 @@
 from contextlib import contextmanager
-from .client import GremlinBase, GremlinClient
-from .connection import WebsocketPool
+from aiogremlin.client import GremlinBase, GremlinClient
+from aiogremlin.connection import WebsocketPool
 
 
 class GremlinContext(GremlinBase):

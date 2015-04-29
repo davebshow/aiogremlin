@@ -1,7 +1,5 @@
 """
-gizmo.exceptions
-
-This module defines exceptions for the Gremlin Server.
+Gremlin Server exceptions.
 """
 
 class SocketClientError(IOError): pass
@@ -10,12 +8,8 @@ class SocketClientError(IOError): pass
 class StatusException(IOError):
 
     def __init__(self, value, result):
-        """
-        Handle all exceptions returned from the Gremlin Server as per:
+        """Handle all exceptions returned from the Gremlin Server as per:
         https://github.com/apache/incubator-tinkerpop/blob/ddd0b36bed9a2b1ce5b335b1753d881f0614a6c4/gremlin-driver/src/main/java/org/apache/tinkerpop/gremlin/driver/message/ResponseStatusCode.java
-
-        :param value: ResultCode:
-        :param value: message:
         """
         self.value = value
         self.response = {

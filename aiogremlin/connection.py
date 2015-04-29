@@ -4,9 +4,9 @@ import asyncio
 
 import aiohttp
 
-from .abc import AbstractFactory, AbstractConnection
-from .exceptions import SocketClientError
-from .log import INFO, conn_logger
+from aiogremlin.abc import AbstractFactory, AbstractConnection
+from aiogremlin.exceptions import SocketClientError
+from aiogremlin.log import INFO, conn_logger
 
 
 class WebsocketPool:
@@ -165,9 +165,6 @@ class BaseConnection(AbstractConnection):
 
 class AiohttpConnection(BaseConnection):
 
-    def __init__(self, socket, pool=None):
-        super().__init__(socket, pool=pool)
-
     @property
     def closed(self):
         return self.socket.closed
@@ -178,6 +175,7 @@ class AiohttpConnection(BaseConnection):
             try:
                 yield from self.socket.close()
             finally:
+                # Socket should close despite errors.
                 self._closed = True
 
     @asyncio.coroutine
@@ -198,7 +196,8 @@ class AiohttpConnection(BaseConnection):
             raise
 
     @asyncio.coroutine
-    def recv(self):
+    def receive(self):
+        """Implements a dispatcher using the aiohttp websocket protocol."""
         while True:
             try:
                 message = yield from self.socket.receive()

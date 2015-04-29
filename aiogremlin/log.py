@@ -1,5 +1,5 @@
 import logging
-# logging.basicConfig(level=logging.DEBUG)
+
 
 INFO = logging.INFO
 
@@ -10,4 +10,3 @@ logging.basicConfig(
 
 client_logger = logging.getLogger("aiogremlin.client")
 conn_logger = logging.getLogger("aiogremlin.connection")
-task_logger = logging.getLogger("aiogremlin.task")

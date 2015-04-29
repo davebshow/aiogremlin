@@ -1,29 +1,35 @@
-"""
-Implements a very simple "protocol" for the Gremlin server.
-"""
+"""Implements a very simple "protocol" for the Gremlin server."""
+
 import asyncio
+import collections
 import json
 
-from .exceptions import RequestError, GremlinServerError
+from aiogremlin.exceptions import RequestError, GremlinServerError
+
+
+Message = collections.namedtuple("Message", ["status_code", "data", "message",
+    "metadata"])
 
 
 @asyncio.coroutine
 def gremlin_response_parser(connection):
-    message = yield from connection.recv()
+    message = yield from connection.receive()
     message = json.loads(message)
-    status_code = message["status"]["code"]
-    if status_code == 200:
+    message = Message(message["status"]["code"],
+                      message["result"]["data"],
+                      message["result"]["meta"],
+                      message["status"]["message"])
+    if message.status_code == 200:
         return message
-    elif status_code == 299:
+    elif message.status_code == 299:
         connection.feed_pool()
         # Return None
     else:
         try:
-            message = message["status"]["message"]
             if status_code < 500:
-                raise RequestError(status_code, message)
+                raise RequestError(message.status_code, message.message)
             else:
-                raise GremlinServerError(status_code, message)
+                raise GremlinServerError(message.status_code, message.message)
         finally:
             yield from connection.release()
 
