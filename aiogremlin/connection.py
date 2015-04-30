@@ -37,6 +37,10 @@ class WebsocketPool:
         return self._factory
 
     @property
+    def closed(self):
+        return self._closed
+
+    @property
     def num_active_conns(self):
         return len(self.active_conns)
 
@@ -113,6 +117,8 @@ class WebsocketPool:
             self.pool.put_nowait(socket)
         except asyncio.QueueFull:
             pass
+            # This should be - not working
+            # yield from socket.release()
 
 
 class BaseFactory(AbstractFactory):
@@ -149,6 +155,10 @@ class BaseConnection(AbstractConnection):
         if self.pool:
             if self in self.pool.active_conns:
                 self.pool.feed_pool(self)
+
+    @asyncio.coroutine
+    def receive(self):
+        return (yield from parse_gremlin_response(self))
 
     @asyncio.coroutine
     def release(self):
@@ -196,7 +206,7 @@ class AiohttpConnection(BaseConnection):
             raise
 
     @asyncio.coroutine
-    def receive(self):
+    def _receive(self):
         """Implements a dispatcher using the aiohttp websocket protocol."""
         while True:
             try:

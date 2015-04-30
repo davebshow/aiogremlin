@@ -1,5 +1,5 @@
-"""
-"""
+"""Client for the Tinkerpop 3 Gremlin Server."""
+
 import asyncio
 import json
 import ssl
@@ -10,7 +10,7 @@ from aiogremlin.log import client_logger
 from aiogremlin.protocol import gremlin_response_parser, GremlinWriter
 
 
-class GremlinBase:
+class GremlinClient:
 
     def __init__(self, uri='ws://localhost:8182/', loop=None, ssl=None,
                  protocol=None, lang="gremlin-groovy", op="eval",
@@ -37,8 +37,6 @@ class GremlinBase:
             poolsize=poolsize, timeout=timeout, loop=self._loop)
         self.factory = factory or self.pool.factory
 
-class GremlinClient(GremlinBase):
-
     @property
     def loop(self):
         return self._loop
@@ -57,8 +55,8 @@ class GremlinClient(GremlinBase):
         return connection
 
     @asyncio.coroutine
-    def send(self, gremlin, connection=None, bindings=None, lang=None,
-             op=None, processor=None, binary=True):
+    def submit(self, gremlin, connection=None, bindings=None, lang=None,
+               op=None, processor=None, binary=True):
         """
         """
         lang = lang or self.lang
@@ -77,49 +75,53 @@ class GremlinClient(GremlinBase):
         if connection is None:
             connection = yield from self.pool.connect(self.uri, loop=self.loop)
         writer = GremlinWriter(connection)
-        yield from writer.send(message, binary=binary)
-        return connection
+        connection = yield from writer.write(message, binary=binary)
+        return GremlinResponse(connection)
 
     @asyncio.coroutine
-    def submit(self, gremlin, bindings=None, lang=None,
+    def execute(self, gremlin, bindings=None, lang=None,
                op=None, processor=None, consumer=None, collect=True, **kwargs):
         """
         """
         lang = lang or self.lang
         op = op or self.op
         processor = processor or self.processor
-        connection = yield from self.send(gremlin, bindings=bindings, lang=lang,
+        resp = yield from self.submit(gremlin, bindings=bindings, lang=lang,
                 op=op, processor=processor)
-        results = yield from self.run(connection, consumer=consumer,
-            collect=collect)
-        return results
+        return (yield from resp.get())
 
-    def s(self, *args, **kwargs):
-        """
-        """
-        if not kwargs.get("loop", ""):
-            kwargs["loop"] = self.loop
-        return async(self.submit, *args, **kwargs)
 
-    @asyncio.coroutine
-    def recv(self, connection):
-        """
-        """
-        return (yield from gremlin_response_parser(connection))
+class GremlinResponse:
+
+    def __init__(self, conn):
+        self._stream = GremlinResponseStream(conn)
+
+    @property
+    def stream(self):
+        return self._stream
 
     @asyncio.coroutine
-    def run(self, connection, consumer=None, collect=True):
+    def get(self):
+        return (yield from self._run())
+
+    @asyncio.coroutine
+    def _run(self):
         """
         """
         results = []
         while True:
-            message = yield from self.recv(connection)
+            message = yield from self.stream.read()
             if message is None:
                 break
-            if consumer:
-                message = consumer(message)
-                if asyncio.iscoroutine(message):
-                    message = yield from asyncio.async(message, loop=self.loop)
-            if message and collect:
-                results.append(message)
+            results.append(message)
         return results
+
+
+class GremlinResponseStream:
+
+    def __init__(self, conn):
+        self.conn = conn
+
+    @asyncio.coroutine
+    def read(self):
+        return (yield from gremlin_response_parser(self.conn))

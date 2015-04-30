@@ -13,7 +13,7 @@ Message = collections.namedtuple("Message", ["status_code", "data", "message",
 
 @asyncio.coroutine
 def gremlin_response_parser(connection):
-    message = yield from connection.receive()
+    message = yield from connection._receive()
     message = json.loads(message)
     message = Message(message["status"]["code"],
                       message["result"]["data"],
@@ -26,7 +26,7 @@ def gremlin_response_parser(connection):
         # Return None
     else:
         try:
-            if status_code < 500:
+            if message.status_code < 500:
                 raise RequestError(message.status_code, message.message)
             else:
                 raise GremlinServerError(message.status_code, message.message)
@@ -40,10 +40,11 @@ class GremlinWriter:
         self._connection = connection
 
     @asyncio.coroutine
-    def send(self, message, binary=True, mime_type="application/json"):
+    def write(self, message, binary=True, mime_type="application/json"):
         if binary:
             message = self._set_message_header(message, mime_type)
         yield from self._connection.send(message, binary)
+        return self._connection
 
     @staticmethod
     def _set_message_header(message, mime_type):

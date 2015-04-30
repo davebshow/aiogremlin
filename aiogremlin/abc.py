@@ -45,5 +45,5 @@ class AbstractConnection(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def recv(self):
+    def receive(self):
         pass
