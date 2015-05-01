@@ -1,4 +1,4 @@
-# aiogremlin 0.0.1 [(gizmo grew up)](https://pypi.python.org/pypi/gizmo/0.1.12)
+# aiogremlin 0.0.2 [(gizmo grew up)](https://pypi.python.org/pypi/gizmo/0.1.12)
 
 `aiogremlin` is a **Python 3** driver for the the [Tinkerpop 3 Gremlin Server](http://www.tinkerpop.com/docs/3.0.0.M7/#gremlin-server). This module is built on [Asyncio](https://docs.python.org/3/library/asyncio.html). By default it uses the [aiohttp](http://aiohttp.readthedocs.org/en/v0.15.3/index.html) websocket client , but it is easy to plug in a different implementation. `aiogremlin` is currently in **alpha** mode, but all major functionality has test coverage.
 
@@ -30,6 +30,8 @@ The Gremlin Server responds with messages in chunks, `GremlinClient.submit` subm
 ```python
 >>> loop = asyncio.get_event_loop()
 >>> gc = GremlinClient('ws://localhost:8182/', loop=loop)
+# Or even better, use the constructor function. This will init pool connections.
+>>> gc = create_client('ws://localhost:8182/', loop=loop)
 
 # Use get.
 >>> @asyncio.coroutine
@@ -37,16 +39,17 @@ The Gremlin Server responds with messages in chunks, `GremlinClient.submit` subm
 ...     resp = yield from gc.submit("x + x", bindings={"x": 4})
 ...     result = yield from resp.get()
 ...     return result
+
 >>> result = loop.run_until_complete(get(gc))
 >>> result
 [Message(status_code=200, data=[8], message={}, metadata='')]
+
 >>> resp = result[0]
 >>> resp.status_code
 200
+
 >>> resp  # Named tuple.
 Message(status_code=200, data=[8], message={}, metadata='')
->>> loop.run_until_complete(gc.close())  # Explicitly close client!!!
->>> loop.close()
 
 # Use stream.
 >>> @asyncio.coroutine
@@ -59,6 +62,9 @@ Message(status_code=200, data=[8], message={}, metadata='')
 ...         print(result)
 >>> loop.run_until_complete(stream(gc))
 Message(status_code=200, data=[2], message={}, metadata='')
+
+>>> loop.run_until_complete(gc.close())  # Explicitly close client!!!
+>>> loop.close()
 ```
 
 For convenience, `aiogremlin` also provides a method `execute`, which is equivalent to calling  `yield from submit()` and then `yield from get()` in the same coroutine.

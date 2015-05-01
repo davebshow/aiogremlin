@@ -5,9 +5,9 @@ import asyncio
 import itertools
 import unittest
 from aiogremlin import (GremlinClient, RequestError, GremlinServerError,
-    SocketClientError, WebsocketPool, AiohttpFactory)
+    SocketClientError, WebsocketPool, AiohttpFactory, create_client)
 
-
+#
 class GremlinClientTests(unittest.TestCase):
 
     def setUp(self):
@@ -39,7 +39,7 @@ class GremlinClientTests(unittest.TestCase):
         sub1 = self.gc.execute("x + x", bindings={"x": 1})
         sub2 = self.gc.execute("x + x", bindings={"x": 2})
         sub3 = self.gc.execute("x + x", bindings={"x": 4})
-        coro = asyncio.wait([asyncio.async(sub1, loop=self.loop),
+        coro = asyncio.gather(*[asyncio.async(sub1, loop=self.loop),
                              asyncio.async(sub2, loop=self.loop),
                              asyncio.async(sub3, loop=self.loop)], loop=self.loop)
         # Here I am looking for resource warnings.
@@ -179,6 +179,20 @@ class WebsocketPoolTests(unittest.TestCase):
             self.assertFalse(conn2.closed)
 
         self.loop.run_until_complete(conn())
+
+
+class CreateClientTests(unittest.TestCase):
+
+    def test_pool_init(self):
+        @asyncio.coroutine
+        def go(loop):
+            gc = yield from create_client(poolsize=10, loop=loop)
+            self.assertEqual(gc.pool.pool.qsize(), 10)
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(None)
+        loop.run_until_complete(go(loop))
+        loop.close()
 
 
 if __name__ == "__main__":

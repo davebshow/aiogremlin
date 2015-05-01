@@ -47,3 +47,7 @@ class AbstractConnection(metaclass=ABCMeta):
     @abstractmethod
     def receive(self):
         pass
+
+    @abstractmethod
+    def _receive(self):
+        pass

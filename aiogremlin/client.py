@@ -10,6 +10,30 @@ from aiogremlin.log import client_logger
 from aiogremlin.protocol import gremlin_response_parser, GremlinWriter
 
 
+@asyncio.coroutine
+def create_client(uri='ws://localhost:8182/', loop=None, ssl=None,
+                  protocol=None, lang="gremlin-groovy", op="eval",
+                  processor="", pool=None, factory=None, poolsize=10,
+                  timeout=None, **kwargs):
+    pool = WebsocketPool(uri,
+                         factory=factory,
+                         poolsize=poolsize,
+                         timeout=timeout,
+                         loop=loop)
+
+    yield from pool.init_pool()
+
+    return GremlinClient(uri=uri,
+                         loop=loop,
+                         ssl=ssl,
+                         protocol=protocol,
+                         lang=lang,
+                         op=op,
+                         processor=processor,
+                         pool=pool,
+                         factory=factory)
+
+
 class GremlinClient:
 
     def __init__(self, uri='ws://localhost:8182/', loop=None, ssl=None,

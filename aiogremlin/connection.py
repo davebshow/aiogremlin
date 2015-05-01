@@ -28,6 +28,13 @@ class WebsocketPool:
         if verbose:
             conn_logger.setLevel(INFO)
 
+    @asyncio.coroutine
+    def init_pool(self):
+        for i in range(self.poolsize):
+            conn = yield from self.factory.connect(self.uri, pool=self,
+                loop=self._loop)
+            self._put(conn)
+
     @property
     def loop(self):
         return self._loop
@@ -85,8 +92,7 @@ class WebsocketPool:
         if not self.pool.empty():
             socket = self.pool.get_nowait()
             conn_logger.info("Reusing socket: {} at {}".format(socket, uri))
-        elif (self.num_active_conns + self.num_connecting >= self.poolsize or
-            not self.poolsize):
+        elif self.num_active_conns + self.num_connecting >= self.poolsize:
             conn_logger.info("Waiting for socket...")
             socket = yield from asyncio.wait_for(self.pool.get(),
                 self.timeout, loop=loop)
@@ -229,7 +235,7 @@ class AiohttpConnection(BaseConnection):
                 conn_logger.warn('Pong received')
             else:
                 try:
-                    if message.tp == aiohttp.MsgType.release:
+                    if message.tp == aiohttp.MsgType.close:
                         conn_logger.warn("Socket connection closed by server.")
                     elif message.tp == aiohttp.MsgType.error:
                         raise SocketClientError(self.socket.exception())
