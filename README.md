@@ -31,7 +31,10 @@ The Gremlin Server responds with messages in chunks, `GremlinClient.submit` subm
 >>> loop = asyncio.get_event_loop()
 >>> gc = GremlinClient('ws://localhost:8182/', loop=loop)
 # Or even better, use the constructor function. This will init pool connections.
->>> gc = create_client('ws://localhost:8182/', loop=loop)
+# ***Must be done inside a coroutine***
+>>> gc = yield from create_client('ws://localhost:8182/', loop=loop)
+# Or outside of a coroutine using the loop to help
+>>> gc = loop.run_until_complete(create_client(loop=loop))
 
 # Use get.
 >>> @asyncio.coroutine

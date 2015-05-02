@@ -3,8 +3,6 @@ https://github.com/KeepSafe/aiohttp/blob/master/benchmark/async.py
 """
 import argparse
 import asyncio
-import collections
-import random
 
 import aiogremlin
 
@@ -20,9 +18,9 @@ def run(client, count, concurrency, loop):
         for x in range(count):
             try:
                 t1 = loop.time()
-                resp = yield from execute("1 + 1")
+                resp = yield from execute("%d" % x)
                 assert resp[0].status_code == 200, resp[0].status_code
-                assert resp[0].data[0] == 2, resp[0].data[0]
+                assert resp[0].data[0] == x, resp[0].data[0]
                 t2 = loop.time()
                 processed_count += 1
             except Exception:
