@@ -1,9 +1,10 @@
 """Client for the Tinkerpop 3 Gremlin Server."""
 
 import asyncio
-import json
 import ssl
 import uuid
+
+import ujson
 
 from aiogremlin.connection import WebsocketPool
 from aiogremlin.log import client_logger
@@ -86,7 +87,7 @@ class GremlinClient:
         lang = lang or self.lang
         op = op or self.op
         processor = processor or self.processor
-        message = json.dumps({
+        message = ujson.dumps({
             "requestId": str(uuid.uuid4()),
             "op": op,
             "processor": processor,

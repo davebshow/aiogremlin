@@ -139,12 +139,12 @@ class AiohttpFactory(BaseFactory):
     @classmethod
     @asyncio.coroutine
     def connect(cls, uri='ws://localhost:8182/', pool=None, protocols=(),
-                connector=None, autoclose=False, autoping=False, loop=None):
+                connector=None, autoclose=False, autoping=True, loop=None):
         if pool:
             loop = loop or pool.loop
         try:
             socket = yield from aiohttp.ws_connect(uri, protocols=protocols,
-                connector=connector, autoclose=autoclose, autoping=autoping,
+                connector=connector, autoclose=False, autoping=True,
                 loop=loop)
         except aiohttp.WSServerHandshakeError as e:
             raise SocketClientError(e.message)
@@ -214,33 +214,25 @@ class AiohttpConnection(BaseConnection):
     @asyncio.coroutine
     def _receive(self):
         """Implements a dispatcher using the aiohttp websocket protocol."""
-        while True:
+        try:
+            message = yield from self.socket.receive()
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            yield from self.release()
+            raise
+        except RuntimeError:
+            yield from self.release()
+            raise
+        if message.tp == aiohttp.MsgType.binary:
+            return message.data.decode()
+        elif message.tp == aiohttp.MsgType.text:
+            return message.data.strip()
+        else:
             try:
-                message = yield from self.socket.receive()
-            except (asyncio.CancelledError, asyncio.TimeoutError):
+                if message.tp == aiohttp.MsgType.close:
+                    conn_logger.warn("Socket connection closed by server.")
+                elif message.tp == aiohttp.MsgType.error:
+                    raise SocketClientError(self.socket.exception())
+                elif message.tp == aiohttp.MsgType.closed:
+                    raise RuntimeError("Socket closed.")
+            finally:
                 yield from self.release()
-                raise
-            except RuntimeError:
-                yield from self.release()
-                raise
-            if message.tp == aiohttp.MsgType.binary:
-                return message.data.decode()
-            elif message.tp == aiohttp.MsgType.text:
-                return message.data.strip()
-            elif message.tp == aiohttp.MsgType.ping:
-                conn_logger.warn("Ping received.")
-                ws.pong()
-                conn_logger.warn("Sent pong.")
-            elif message.tp == aiohttp.MsgType.pong:
-                conn_logger.warn('Pong received')
-            else:
-                try:
-                    if message.tp == aiohttp.MsgType.close:
-                        conn_logger.warn("Socket connection closed by server.")
-                    elif message.tp == aiohttp.MsgType.error:
-                        raise SocketClientError(self.socket.exception())
-                    elif message.tp == aiohttp.MsgType.closed:
-                        raise RuntimeError("Socket closed.")
-                    break
-                finally:
-                    yield from self.release()

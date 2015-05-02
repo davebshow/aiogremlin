@@ -1,2 +1,3 @@
 0.0.1 - 4/2015: Birth!
 0.0.2 - 5/1/2015: Added an init_pool method and a create_client constructor.
+0.0.3 - 5/2/2015: Using ujson for serialization.

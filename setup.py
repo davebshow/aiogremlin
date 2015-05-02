@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="aiogremlin",
-    version="0.0.2",
+    version="0.0.3",
     url="",
     license="MIT",
     author="davebshow",
@@ -12,7 +12,8 @@ setup(
     long_description=open("README.txt").read(),
     packages=["aiogremlin", "tests"],
     install_requires=[
-        "aiohttp==0.15.3"
+        "aiohttp==0.15.3",
+        "ujson==1.33"
     ],
     test_suite="tests",
     classifiers=[

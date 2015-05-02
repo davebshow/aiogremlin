@@ -2,7 +2,8 @@
 
 import asyncio
 import collections
-import json
+
+import ujson
 
 from aiogremlin.exceptions import RequestError, GremlinServerError
 
@@ -14,7 +15,7 @@ Message = collections.namedtuple("Message", ["status_code", "data", "message",
 @asyncio.coroutine
 def gremlin_response_parser(connection):
     message = yield from connection._receive()
-    message = json.loads(message)
+    message = ujson.loads(message)
     message = Message(message["status"]["code"],
                       message["result"]["data"],
                       message["result"]["meta"],
