@@ -3,6 +3,8 @@ https://github.com/KeepSafe/aiohttp/blob/master/benchmark/async.py
 """
 import argparse
 import asyncio
+import collections
+import random
 
 import aiogremlin
 
@@ -11,20 +13,28 @@ import aiogremlin
 def run(client, count, concurrency, loop):
     processed_count = 0
     execute = client.execute
+    inqueue = collections.deque()
+    popleft = inqueue.popleft
 
     @asyncio.coroutine
     def do_bomb():
         nonlocal processed_count
-        for x in range(count):
+        while inqueue:
+            mssg, result = popleft()
             try:
-                t1 = loop.time()
-                resp = yield from execute("%d" % x)
+                resp = yield from execute(mssg)
                 assert resp[0].status_code == 200, resp[0].status_code
-                assert resp[0].data[0] == x, resp[0].data[0]
-                t2 = loop.time()
+                assert resp[0].data[0] == result, resp[0].data[0]
                 processed_count += 1
             except Exception:
                 continue
+
+    for i in range(count):
+        rnd1 = random.randint(1, 9)
+        rnd2 = random.randint(1, 9)
+        mssg = "{} + {}".format(rnd1, rnd2)
+        result = rnd1 + rnd2
+        inqueue.append((mssg, result))
 
     bombers = []
     append = bombers.append
@@ -43,19 +53,18 @@ def run(client, count, concurrency, loop):
 
 
 @asyncio.coroutine
-def main(client, tests, count, concurrency, loop):
+def main(client, tests, count, concurrency, warmups, loop):
     execute = client.execute
     # warmup
-    for i in range(10000):
-        resp = yield from execute("1+1")
-        assert resp[0].status_code == 200, resp[0].status_code
+    for x in range(warmups):
+        for i in range(10000):
+            resp = yield from execute("1+1")
+            assert resp[0].status_code == 200, resp[0].status_code
+        yield from asyncio.sleep(1)
     print("Warmup successful!")
-    # Rest
-    yield from asyncio.sleep(30)
-    rps = yield from run(client, count, concurrency, loop)
-    for i in range(tests - 1):
+    for i in range(tests):
         # Take a breather between tests.
-        yield from asyncio.sleep(60)
+        yield from asyncio.sleep(1)
         rps = yield from run(client, count, concurrency, loop)
 
 
@@ -70,12 +79,16 @@ ARGS.add_argument(
     help='message count (default: `%(default)s`)')
 ARGS.add_argument(
     '-c', '--concurrency', action="store",
-    nargs='?', type=int, default=10,
+    nargs='?', type=int, default=500,
     help='count of parallel requests (default: `%(default)s`)')
 ARGS.add_argument(
     '-p', '--poolsize', action="store",
-    nargs='?', type=int, default=256,
+    nargs='?', type=int, default=500,
     help='num connected websockets (default: `%(default)s`)')
+ARGS.add_argument(
+    '-w', '--warmups', action="store",
+    nargs='?', type=int, default=3,
+    help='num warmups (default: `%(default)s`)')
 
 
 if __name__ == "__main__":
@@ -84,14 +97,14 @@ if __name__ == "__main__":
     num_mssg = args.count
     concurr = args.concurrency
     poolsize = args.poolsize
+    num_warmups = args.warmups
     loop = asyncio.get_event_loop()
     client = loop.run_until_complete(
         aiogremlin.create_client(loop=loop, poolsize=poolsize))
     try:
-        print(
-            "Runs: {}. Messages: {}. Concurrency: {}. Total mssg/run: {} ".format(
-            num_tests, num_mssg, concurr, num_mssg * concurr))
-        main = main(client, num_tests, num_mssg, concurr, loop)
+        print("Runs: {}. Warmups: {}. Messages: {}. Concurrency: {}.".format(
+            num_tests, num_warmups, num_mssg, concurr))
+        main = main(client, num_tests, num_mssg, concurr, num_warmups, loop)
         loop.run_until_complete(main)
     finally:
         loop.run_until_complete(client.close())
