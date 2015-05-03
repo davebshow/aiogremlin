@@ -37,19 +37,17 @@ def run(client, count, concurrency, loop):
         inqueue.append((mssg, result))
 
     bombers = []
-    append = bombers.append
-    async = asyncio.async
     for i in range(concurrency):
-        bomber = async(do_bomb(), loop=loop)
-        append(bomber)
+        bomber = asyncio.async(do_bomb(), loop=loop)
+        bombers.append(bomber)
 
     t1 = loop.time()
     yield from asyncio.gather(*bombers, loop=loop)
     t2 = loop.time()
-    rps = processed_count / (t2 - t1)
-    print("Benchmark complete: {} rps. {} messages in {}".format(rps,
+    mps = processed_count / (t2 - t1)
+    print("Benchmark complete: {} mps. {} messages in {}".format(mps,
         processed_count, t2-t1))
-    return rps
+    return mps
 
 
 @asyncio.coroutine
@@ -57,15 +55,17 @@ def main(client, tests, count, concurrency, warmups, loop):
     execute = client.execute
     # warmup
     for x in range(warmups):
-        for i in range(10000):
-            resp = yield from execute("1+1")
-            assert resp[0].status_code == 200, resp[0].status_code
-        yield from asyncio.sleep(1)
+        print("Warmup run {}:".format(x))
+        yield from run(client, count, concurrency, loop)
     print("Warmup successful!")
+    mps_list = []
     for i in range(tests):
         # Take a breather between tests.
         yield from asyncio.sleep(1)
-        rps = yield from run(client, count, concurrency, loop)
+        mps = yield from run(client, count, concurrency, loop)
+        mps_list.append(mps)
+    print("Average messages per second: {}".format(
+        sum(mps_list) / float(len(mps_list))))
 
 
 ARGS = argparse.ArgumentParser(description="Run benchmark.")
@@ -83,11 +83,11 @@ ARGS.add_argument(
     help='count of parallel requests (default: `%(default)s`)')
 ARGS.add_argument(
     '-p', '--poolsize', action="store",
-    nargs='?', type=int, default=500,
+    nargs='?', type=int, default=256,
     help='num connected websockets (default: `%(default)s`)')
 ARGS.add_argument(
     '-w', '--warmups', action="store",
-    nargs='?', type=int, default=3,
+    nargs='?', type=int, default=1,
     help='num warmups (default: `%(default)s`)')
 
 
