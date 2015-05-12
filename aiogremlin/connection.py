@@ -230,9 +230,17 @@ class AiohttpConnection(BaseConnection):
             yield from self.release()
             raise
         if message.tp == aiohttp.MsgType.binary:
-            self.parser.feed_data(message.data.decode())
+            try:
+                self.parser.feed_data(message.data.decode())
+            except Exception:
+                self.release()
+                raise
         elif message.tp == aiohttp.MsgType.text:
-            self.parser.feed_data(message.data.strip())
+            try:
+                self.parser.feed_data(message.data.strip())
+            except Exception:
+                self.release()
+                raise
         else:
             try:
                 if message.tp == aiohttp.MsgType.close:

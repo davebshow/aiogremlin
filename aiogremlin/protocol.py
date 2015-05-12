@@ -23,15 +23,13 @@ def gremlin_response_parser(out, buf):
         if message.status_code == 200:
             out.feed_data(message)
         elif message.status_code == 299:
+            out.feed_data(message)
             out.feed_eof()
         else:
-            try:
-                if message.status_code < 500:
-                    raise RequestError(message.status_code, message.message)
-                else:
-                    raise GremlinServerError(message.status_code, message.message)
-            finally:
-                yield from connection.release()
+            if message.status_code < 500:
+                raise RequestError(message.status_code, message.message)
+            else:
+                raise GremlinServerError(message.status_code, message.message)
 
 
 class GremlinWriter:
