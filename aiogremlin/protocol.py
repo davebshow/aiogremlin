@@ -12,6 +12,7 @@ Message = collections.namedtuple("Message", ["status_code", "data", "message",
     "metadata"])
 
 
+# REWRITE FOR StreamParser
 @asyncio.coroutine
 def gremlin_response_parser(connection):
     message = yield from connection._receive()

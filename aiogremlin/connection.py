@@ -156,6 +156,11 @@ class BaseConnection(AbstractConnection):
     def __init__(self, socket, pool=None):
         self.socket = socket
         self._pool = pool
+        self._parser = aiohttp.StreamParser()
+
+    @property
+    def parser(self):
+        return self._parser
 
     def feed_pool(self):
         if self.pool:
@@ -223,9 +228,9 @@ class AiohttpConnection(BaseConnection):
             yield from self.release()
             raise
         if message.tp == aiohttp.MsgType.binary:
-            return message.data.decode()
+            self._parser.feed_data(message.data.decode())
         elif message.tp == aiohttp.MsgType.text:
-            return message.data.strip()
+            self._parser.feed_data(message.data.strip())
         else:
             try:
                 if message.tp == aiohttp.MsgType.close:

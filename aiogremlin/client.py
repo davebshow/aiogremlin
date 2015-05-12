@@ -101,7 +101,9 @@ class GremlinClient:
             connection = yield from self.pool.connect(self.uri, loop=self.loop)
         writer = GremlinWriter(connection)
         connection = yield from writer.write(message, binary=binary)
-        return GremlinResponse(connection)
+        queue = connection.parser.set_parser(gremlin_response_parser,
+            output=aiohttp.DataQueue())
+        return GremlinResponse(connection, queue)
 
     @asyncio.coroutine
     def execute(self, gremlin, bindings=None, lang=None,
@@ -118,8 +120,8 @@ class GremlinClient:
 
 class GremlinResponse:
 
-    def __init__(self, conn):
-        self._stream = GremlinResponseStream(conn)
+    def __init__(self, conn, queue):
+        self._stream = GremlinResponseStream(conn, queue)
 
     @property
     def stream(self):
@@ -145,8 +147,20 @@ class GremlinResponse:
 class GremlinResponseStream:
 
     def __init__(self, conn):
-        self.conn = conn
+        self._conn = conn
+        self._queue = queue
+
+    @asyncio.coroutine
+    def _read(self):
+        message = asyncio.async(self._queue.read(), loop=self._loop)
+        done, pending = yield from asyncio.wait(
+            [message, asyncio.async(self._conn._receive(), loop=self._loop)],
+            loop=self._loop, return_when=asyncio.FIRST_COMPLETED)
+        if message in done:
+            return message.result()
+        else:
+            message.cancel()
 
     @asyncio.coroutine
     def read(self):
-        return (yield from gremlin_response_parser(self.conn))
+        return (yield from self._read)

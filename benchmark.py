@@ -20,9 +20,9 @@ def run(client, count, concurrency, loop):
     def do_bomb():
         nonlocal processed_count
         while inqueue:
-            mssg, result = popleft()
+            params, result = popleft()
             try:
-                resp = yield from execute(mssg)
+                resp = yield from execute("x + y", bindings=params)
                 assert resp[0].status_code == 200, resp[0].status_code
                 assert resp[0].data[0] == result, resp[0].data[0]
                 processed_count += 1
@@ -32,9 +32,9 @@ def run(client, count, concurrency, loop):
     for i in range(count):
         rnd1 = random.randint(1, 9)
         rnd2 = random.randint(1, 9)
-        mssg = "{} + {}".format(rnd1, rnd2)
+        params = {"x": rnd1, "y": rnd2}
         result = rnd1 + rnd2
-        inqueue.append((mssg, result))
+        inqueue.append((params, result))
 
     bombers = []
     for i in range(concurrency):
@@ -55,7 +55,7 @@ def main(client, tests, count, concurrency, warmups, loop):
     execute = client.execute
     # warmup
     for x in range(warmups):
-        print("Warmup run {}:".format(x))
+        print("Warmup run {}:".format(x + 1))
         yield from run(client, count, concurrency, loop)
     print("Warmup successful!")
     mps_list = []
@@ -79,7 +79,7 @@ ARGS.add_argument(
     help='message count (default: `%(default)s`)')
 ARGS.add_argument(
     '-c', '--concurrency', action="store",
-    nargs='?', type=int, default=500,
+    nargs='?', type=int, default=256,
     help='count of parallel requests (default: `%(default)s`)')
 ARGS.add_argument(
     '-p', '--poolsize', action="store",
@@ -87,7 +87,7 @@ ARGS.add_argument(
     help='num connected websockets (default: `%(default)s`)')
 ARGS.add_argument(
     '-w', '--warmups', action="store",
-    nargs='?', type=int, default=1,
+    nargs='?', type=int, default=5,
     help='num warmups (default: `%(default)s`)')
 
 
@@ -102,8 +102,8 @@ if __name__ == "__main__":
     client = loop.run_until_complete(
         aiogremlin.create_client(loop=loop, poolsize=poolsize))
     try:
-        print("Runs: {}. Warmups: {}. Messages: {}. Concurrency: {}.".format(
-            num_tests, num_warmups, num_mssg, concurr))
+        print("Runs: {}. Warmups: {}. Messages: {}. Concurrency: {}. Poolsize: {}".format(
+            num_tests, num_warmups, num_mssg, concurr, poolsize))
         main = main(client, num_tests, num_mssg, concurr, num_warmups, loop)
         loop.run_until_complete(main)
     finally:
