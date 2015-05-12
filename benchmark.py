@@ -79,7 +79,7 @@ ARGS.add_argument(
     help='message count (default: `%(default)s`)')
 ARGS.add_argument(
     '-c', '--concurrency', action="store",
-    nargs='?', type=int, default=500,
+    nargs='?', type=int, default=256,
     help='count of parallel requests (default: `%(default)s`)')
 ARGS.add_argument(
     '-p', '--poolsize', action="store",
@@ -87,7 +87,7 @@ ARGS.add_argument(
     help='num connected websockets (default: `%(default)s`)')
 ARGS.add_argument(
     '-w', '--warmups', action="store",
-    nargs='?', type=int, default=1,
+    nargs='?', type=int, default=5,
     help='num warmups (default: `%(default)s`)')
 
 
