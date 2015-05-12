@@ -13,19 +13,19 @@ Message = collections.namedtuple("Message", ["status_code", "data", "message",
 
 
 # REWRITE FOR StreamParser
-@asyncio.coroutine
-def gremlin_response_parser(connection):
-    message = yield from connection._receive()
+def gremlin_response_parser(out, buf):
+    # import ipdb; ipdb.set_trace()
+    message = yield buf
     message = ujson.loads(message)
     message = Message(message["status"]["code"],
                       message["result"]["data"],
                       message["result"]["meta"],
                       message["status"]["message"])
     if message.status_code == 200:
-        return message
+        out.feed_data(message)
     elif message.status_code == 299:
         connection.feed_pool()
-        # Return None
+        out.feed_eof()
     else:
         try:
             if message.status_code < 500:

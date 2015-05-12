@@ -4,6 +4,7 @@ import asyncio
 import ssl
 import uuid
 
+import aiohttp
 import ujson
 
 from aiogremlin.connection import WebsocketPool
@@ -102,8 +103,8 @@ class GremlinClient:
         writer = GremlinWriter(connection)
         connection = yield from writer.write(message, binary=binary)
         queue = connection.parser.set_parser(gremlin_response_parser,
-            output=aiohttp.DataQueue())
-        return GremlinResponse(connection, queue)
+            output=aiohttp.DataQueue(loop=self._loop))
+        return GremlinResponse(connection, queue, loop=self._loop)
 
     @asyncio.coroutine
     def execute(self, gremlin, bindings=None, lang=None,
@@ -120,8 +121,10 @@ class GremlinClient:
 
 class GremlinResponse:
 
-    def __init__(self, conn, queue):
-        self._stream = GremlinResponseStream(conn, queue)
+    def __init__(self, conn, queue, loop=None):
+        self._loop = loop or asyncio.get_event_loop()
+        self._stream = GremlinResponseStream(conn, queue, loop=self._loop)
+
 
     @property
     def stream(self):
@@ -146,9 +149,10 @@ class GremlinResponse:
 
 class GremlinResponseStream:
 
-    def __init__(self, conn):
+    def __init__(self, conn, queue, loop=None):
         self._conn = conn
         self._queue = queue
+        self._loop = loop or asyncio.get_event_loop()
 
     @asyncio.coroutine
     def _read(self):
@@ -157,10 +161,13 @@ class GremlinResponseStream:
             [message, asyncio.async(self._conn._receive(), loop=self._loop)],
             loop=self._loop, return_when=asyncio.FIRST_COMPLETED)
         if message in done:
-            return message.result()
+            try:
+                return message.result()
+            except aiohttp.streams.EofStream:
+                pass
         else:
             message.cancel()
 
     @asyncio.coroutine
     def read(self):
-        return (yield from self._read)
+        return (yield from self._read())

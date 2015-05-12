@@ -148,15 +148,17 @@ class AiohttpFactory(BaseFactory):
                 loop=loop)
         except aiohttp.WSServerHandshakeError as e:
             raise SocketClientError(e.message)
-        return AiohttpConnection(socket, pool)
+        return AiohttpConnection(socket, pool, loop=loop)
 
 
 class BaseConnection(AbstractConnection):
 
-    def __init__(self, socket, pool=None):
+    def __init__(self, socket, pool=None, loop=None):
         self.socket = socket
+        self._loop = loop or asyncio.get_event_loop()
         self._pool = pool
-        self._parser = aiohttp.StreamParser()
+        self._parser = aiohttp.StreamParser(
+            buf=aiohttp.DataQueue(loop=self._loop), loop=self._loop)
 
     @property
     def parser(self):
@@ -228,9 +230,9 @@ class AiohttpConnection(BaseConnection):
             yield from self.release()
             raise
         if message.tp == aiohttp.MsgType.binary:
-            self._parser.feed_data(message.data.decode())
+            self.parser.feed_data(message.data.decode())
         elif message.tp == aiohttp.MsgType.text:
-            self._parser.feed_data(message.data.strip())
+            self.parser.feed_data(message.data.strip())
         else:
             try:
                 if message.tp == aiohttp.MsgType.close:
