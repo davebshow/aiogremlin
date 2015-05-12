@@ -12,28 +12,26 @@ Message = collections.namedtuple("Message", ["status_code", "data", "message",
     "metadata"])
 
 
-# REWRITE FOR StreamParser
 def gremlin_response_parser(out, buf):
-    # import ipdb; ipdb.set_trace()
-    message = yield buf
-    message = ujson.loads(message)
-    message = Message(message["status"]["code"],
-                      message["result"]["data"],
-                      message["result"]["meta"],
-                      message["status"]["message"])
-    if message.status_code == 200:
-        out.feed_data(message)
-    elif message.status_code == 299:
-        connection.feed_pool()
-        out.feed_eof()
-    else:
-        try:
-            if message.status_code < 500:
-                raise RequestError(message.status_code, message.message)
-            else:
-                raise GremlinServerError(message.status_code, message.message)
-        finally:
-            yield from connection.release()
+    while True:
+        message = yield
+        message = ujson.loads(message)
+        message = Message(message["status"]["code"],
+                          message["result"]["data"],
+                          message["result"]["meta"],
+                          message["status"]["message"])
+        if message.status_code == 200:
+            out.feed_data(message)
+        elif message.status_code == 299:
+            out.feed_eof()
+        else:
+            try:
+                if message.status_code < 500:
+                    raise RequestError(message.status_code, message.message)
+                else:
+                    raise GremlinServerError(message.status_code, message.message)
+            finally:
+                yield from connection.release()
 
 
 class GremlinWriter:

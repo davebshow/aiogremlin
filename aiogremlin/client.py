@@ -125,7 +125,6 @@ class GremlinResponse:
         self._loop = loop or asyncio.get_event_loop()
         self._stream = GremlinResponseStream(conn, queue, loop=self._loop)
 
-
     @property
     def stream(self):
         return self._stream
@@ -164,7 +163,10 @@ class GremlinResponseStream:
             try:
                 return message.result()
             except aiohttp.streams.EofStream:
-                pass
+                self._conn.feed_pool()
+            except Exception:
+                self._conn.feed_pool()
+                raise
         else:
             message.cancel()
 
