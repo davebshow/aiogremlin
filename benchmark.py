@@ -27,7 +27,7 @@ def run(client, count, concurrency, loop):
                 assert resp[0].data[0] == result, resp[0].data[0]
                 processed_count += 1
             except Exception:
-                continue
+                raise
 
     for i in range(count):
         rnd1 = random.randint(1, 9)
@@ -79,7 +79,7 @@ ARGS.add_argument(
     help='message count (default: `%(default)s`)')
 ARGS.add_argument(
     '-c', '--concurrency', action="store",
-    nargs='?', type=int, default=500,
+    nargs='?', type=int, default=256,
     help='count of parallel requests (default: `%(default)s`)')
 ARGS.add_argument(
     '-p', '--poolsize', action="store",
@@ -87,7 +87,7 @@ ARGS.add_argument(
     help='num connected websockets (default: `%(default)s`)')
 ARGS.add_argument(
     '-w', '--warmups', action="store",
-    nargs='?', type=int, default=1,
+    nargs='?', type=int, default=5,
     help='num warmups (default: `%(default)s`)')
 
 
@@ -102,8 +102,8 @@ if __name__ == "__main__":
     client = loop.run_until_complete(
         aiogremlin.create_client(loop=loop, poolsize=poolsize))
     try:
-        print("Runs: {}. Warmups: {}. Messages: {}. Concurrency: {}.".format(
-            num_tests, num_warmups, num_mssg, concurr))
+        print("Runs: {}. Warmups: {}. Messages: {}. Concurrency: {}. Poolsize: {}".format(
+            num_tests, num_warmups, num_mssg, concurr, poolsize))
         main = main(client, num_tests, num_mssg, concurr, num_warmups, loop)
         loop.run_until_complete(main)
     finally:

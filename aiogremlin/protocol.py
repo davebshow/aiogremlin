@@ -42,6 +42,7 @@ class GremlinWriter:
 
     @asyncio.coroutine
     def write(self, message, binary=True, mime_type="application/json"):
+        message = ujson.dumps(message)
         if binary:
             message = self._set_message_header(message, mime_type)
         yield from self._connection.send(message, binary)

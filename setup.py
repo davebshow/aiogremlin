@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="aiogremlin",
-    version="0.0.3",
+    version="0.0.4",
     url="",
     license="MIT",
     author="davebshow",
