@@ -109,9 +109,7 @@ class GremlinClient:
             connection = yield from self.pool.connect(self.uri, loop=self.loop)
         writer = GremlinWriter(connection)
         connection = yield from writer.write(message, binary=binary)
-        queue = connection.parser.set_parser(gremlin_response_parser,
-            output=aiohttp.DataQueue(loop=self._loop))
-        return GremlinResponse(connection, queue, loop=self._loop)
+        return GremlinResponse(connection, loop=self._loop)
 
     @asyncio.coroutine
     def execute(self, gremlin, bindings=None, lang=None,
@@ -128,9 +126,9 @@ class GremlinClient:
 
 class GremlinResponse:
 
-    def __init__(self, conn, queue, loop=None):
+    def __init__(self, conn, loop=None):
         self._loop = loop or asyncio.get_event_loop()
-        self._stream = GremlinResponseStream(conn, queue, loop=self._loop)
+        self._stream = GremlinResponseStream(conn, loop=self._loop)
 
     @property
     def stream(self):
@@ -155,23 +153,25 @@ class GremlinResponse:
 
 class GremlinResponseStream:
 
-    def __init__(self, conn, queue, loop=None):
+    def __init__(self, conn, loop=None):
         self._conn = conn
-        self._queue = queue
         self._loop = loop or asyncio.get_event_loop()
+        data_stream = aiohttp.DataQueue(loop=self._loop)
+        self._stream = self._conn.parser.set_parser(gremlin_response_parser,
+                                                    output=data_stream)
 
     @asyncio.coroutine
     def read(self):
         # For 3.0.0.M9
-        # if self._queue.at_eof():
+        # if self._stream.at_eof():
         #     self._conn.feed_pool()
         #     message = None
         # else:
         # This will be different 3.0.0.M9
         yield from self._conn._receive()
-        if self._queue.is_eof():
+        if self._stream.is_eof():
             self._conn.feed_pool()
             message = None
         else:
-            message = yield from self._queue.read()
+            message = yield from self._stream.read()
         return message
