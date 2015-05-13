@@ -12,27 +12,32 @@ Message = collections.namedtuple("Message", ["status_code", "data", "message",
     "metadata"])
 
 
-@asyncio.coroutine
-def gremlin_response_parser(connection):
-    message = yield from connection._receive()
-    message = ujson.loads(message)
-    message = Message(message["status"]["code"],
-                      message["result"]["data"],
-                      message["result"]["meta"],
-                      message["status"]["message"])
-    if message.status_code == 200:
-        return message
-    elif message.status_code == 299:
-        connection.feed_pool()
-        # Return None
-    else:
-        try:
+def gremlin_response_parser(out, buf):
+    while True:
+        message = yield
+        message = ujson.loads(message)
+        message = Message(message["status"]["code"],
+                          message["result"]["data"],
+                          message["result"]["meta"],
+                          message["status"]["message"])
+        if message.status_code == 200:
+            out.feed_data(message)
+            # For 3.0.0.M9
+            # out.feed_eof()
+        # This will be terminated in 3.0.0.M9
+        elif message.status_code == 299:
+            out.feed_eof()
+        # For 3.0.0.M9
+        # elif message.status_code == 206:
+        #     out.feed_data(message)
+        # elif message.status_code == 204:
+        #     out.feed_data(message)
+        #     out.feed_eof()
+        else:
             if message.status_code < 500:
                 raise RequestError(message.status_code, message.message)
             else:
                 raise GremlinServerError(message.status_code, message.message)
-        finally:
-            yield from connection.release()
 
 
 class GremlinWriter:
@@ -42,6 +47,7 @@ class GremlinWriter:
 
     @asyncio.coroutine
     def write(self, message, binary=True, mime_type="application/json"):
+        message = ujson.dumps(message)
         if binary:
             message = self._set_message_header(message, mime_type)
         yield from self._connection.send(message, binary)

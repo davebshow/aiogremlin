@@ -102,17 +102,15 @@ class WebsocketPool:
             try:
                 socket = yield from self.factory.connect(uri, pool=self,
                     loop=loop)
-            except:
-                raise
-            else:
-                conn_logger.info("New connection on socket: {} at {}".format(
-                    socket, uri))
             finally:
                 self.num_connecting -= 1
         if not socket.closed:
+            conn_logger.info("New connection on socket: {} at {}".format(
+                socket, uri))
             self.active_conns.add(socket)
         # Untested.
         elif num_retries > 0:
+            conn_logger.warning("Got bad socket, retry...")
             socket = yield from self.connect(uri, loop, num_retries - 1)
         else:
             raise RuntimeError("Unable to connect, max retries exceeded.")
@@ -148,23 +146,26 @@ class AiohttpFactory(BaseFactory):
                 loop=loop)
         except aiohttp.WSServerHandshakeError as e:
             raise SocketClientError(e.message)
-        return AiohttpConnection(socket, pool)
+        return AiohttpConnection(socket, pool, loop=loop)
 
 
 class BaseConnection(AbstractConnection):
 
-    def __init__(self, socket, pool=None):
+    def __init__(self, socket, pool=None, loop=None):
         self.socket = socket
+        self._loop = loop or asyncio.get_event_loop()
         self._pool = pool
+        self._parser = aiohttp.StreamParser(
+            buf=aiohttp.DataQueue(loop=self._loop), loop=self._loop)
+
+    @property
+    def parser(self):
+        return self._parser
 
     def feed_pool(self):
         if self.pool:
             if self in self.pool.active_conns:
                 self.pool.feed_pool(self)
-
-    @asyncio.coroutine
-    def receive(self):
-        return (yield from parse_gremlin_response(self))
 
     @asyncio.coroutine
     def release(self):
@@ -223,9 +224,17 @@ class AiohttpConnection(BaseConnection):
             yield from self.release()
             raise
         if message.tp == aiohttp.MsgType.binary:
-            return message.data.decode()
+            try:
+                self.parser.feed_data(message.data.decode())
+            except Exception:
+                self.release()
+                raise
         elif message.tp == aiohttp.MsgType.text:
-            return message.data.strip()
+            try:
+                self.parser.feed_data(message.data.strip())
+            except Exception:
+                self.release()
+                raise
         else:
             try:
                 if message.tp == aiohttp.MsgType.close:
