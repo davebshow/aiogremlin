@@ -162,10 +162,16 @@ class GremlinResponseStream:
 
     @asyncio.coroutine
     def read(self):
-        if self._queue.at_eof():
+        # For 3.0.0.M9
+        # if self._queue.at_eof():
+        #     self._conn.feed_pool()
+        #     message = None
+        # else:
+        # This will be different 3.0.0.M9
+        yield from self._conn._receive()
+        if self._queue.is_eof():
             self._conn.feed_pool()
             message = None
         else:
-            yield from self._conn._receive()
             message = yield from self._queue.read()
         return message

@@ -22,10 +22,12 @@ def gremlin_response_parser(out, buf):
                           message["status"]["message"])
         if message.status_code == 200:
             out.feed_data(message)
+            # For 3.0.0.M9
             # out.feed_eof()
+        # This will be terminated in 3.0.0.M9
         elif message.status_code == 299:
-            out.feed_data(message)
             out.feed_eof()
+        # For 3.0.0.M9
         # elif message.status_code == 206:
         #     out.feed_data(message)
         # elif message.status_code == 204:
