@@ -76,6 +76,11 @@ class GremlinClientTests(unittest.TestCase):
             error = True
         self.assertTrue(error)
 
+    def test_session(self):
+        execute = self.gc.execute("x + x", processor="session", bindings={"x": 4})
+        results = self.loop.run_until_complete(execute)
+        self.assertEqual(results[0].data[0], 8)
+
 
 class WebsocketPoolTests(unittest.TestCase):
 
