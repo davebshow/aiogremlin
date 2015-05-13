@@ -161,7 +161,7 @@ class GremlinResponseStream:
         self._loop = loop or asyncio.get_event_loop()
 
     @asyncio.coroutine
-    def _read(self):
+    def read(self):
         if self._queue.at_eof():
             self._conn.feed_pool()
             message = None
@@ -169,8 +169,3 @@ class GremlinResponseStream:
             yield from self._conn._receive()
             message = yield from self._queue.read()
         return message
-
-
-    @asyncio.coroutine
-    def read(self):
-        return (yield from self._read())
