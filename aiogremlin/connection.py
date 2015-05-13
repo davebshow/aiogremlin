@@ -168,10 +168,6 @@ class BaseConnection(AbstractConnection):
                 self.pool.feed_pool(self)
 
     @asyncio.coroutine
-    def receive(self):
-        return (yield from parse_gremlin_response(self))
-
-    @asyncio.coroutine
     def release(self):
         try:
             yield from self.close()
