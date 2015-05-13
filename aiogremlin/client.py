@@ -162,22 +162,14 @@ class GremlinResponseStream:
 
     @asyncio.coroutine
     def _read(self):
-        # This will find the eof set at 200 response
         if self._queue.at_eof():
             self._conn.feed_pool()
-            return
-        message = asyncio.async(self._queue.read(), loop=self._loop)
-        done, pending = yield from asyncio.wait(
-            [message, asyncio.async(self._conn._receive(), loop=self._loop)],
-            loop=self._loop, return_when=asyncio.FIRST_COMPLETED)
-        if message in done:
-            # Temporary
-            try:
-                return message.result()
-            except aiohttp.EofStream:
-                self._conn.feed_pool()
+            message = None
         else:
-            message.cancel()
+            yield from self._conn._receive()
+            message = yield from self._queue.read()
+        return message
+
 
     @asyncio.coroutine
     def read(self):
