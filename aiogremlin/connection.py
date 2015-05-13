@@ -102,17 +102,15 @@ class WebsocketPool:
             try:
                 socket = yield from self.factory.connect(uri, pool=self,
                     loop=loop)
-            except:
-                raise
-            else:
-                conn_logger.info("New connection on socket: {} at {}".format(
-                    socket, uri))
             finally:
                 self.num_connecting -= 1
         if not socket.closed:
+            conn_logger.info("New connection on socket: {} at {}".format(
+                socket, uri))
             self.active_conns.add(socket)
         # Untested.
         elif num_retries > 0:
+            conn_logger.warning("Got bad socket, retry...")
             socket = yield from self.connect(uri, loop, num_retries - 1)
         else:
             raise RuntimeError("Unable to connect, max retries exceeded.")

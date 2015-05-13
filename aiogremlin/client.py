@@ -5,10 +5,9 @@ import ssl
 import uuid
 
 import aiohttp
-import ujson
 
 from aiogremlin.connection import WebsocketPool
-from aiogremlin.log import client_logger
+from aiogremlin.log import client_logger, INFO
 from aiogremlin.protocol import gremlin_response_parser, GremlinWriter
 
 
@@ -16,12 +15,13 @@ from aiogremlin.protocol import gremlin_response_parser, GremlinWriter
 def create_client(uri='ws://localhost:8182/', loop=None, ssl=None,
                   protocol=None, lang="gremlin-groovy", op="eval",
                   processor="", pool=None, factory=None, poolsize=10,
-                  timeout=None, **kwargs):
+                  timeout=None, verbose=False, **kwargs):
     pool = WebsocketPool(uri,
                          factory=factory,
                          poolsize=poolsize,
                          timeout=timeout,
-                         loop=loop)
+                         loop=loop,
+                         verbose=verbose)
 
     yield from pool.init_pool()
 
@@ -33,7 +33,8 @@ def create_client(uri='ws://localhost:8182/', loop=None, ssl=None,
                          op=op,
                          processor=processor,
                          pool=pool,
-                         factory=factory)
+                         factory=factory,
+                         verbose=verbose)
 
 
 class GremlinClient:
@@ -41,7 +42,7 @@ class GremlinClient:
     def __init__(self, uri='ws://localhost:8182/', loop=None, ssl=None,
                  protocol=None, lang="gremlin-groovy", op="eval",
                  processor="", pool=None, factory=None, poolsize=10,
-                 timeout=None, **kwargs):
+                 timeout=None, verbose=True, **kwargs):
         """
         """
         self.uri = uri
@@ -62,6 +63,8 @@ class GremlinClient:
         self.pool = pool or WebsocketPool(uri, factory=factory,
             poolsize=poolsize, timeout=timeout, loop=self._loop)
         self.factory = factory or self.pool.factory
+        if verbose:
+            client_logger.setLevel(INFO)
 
     @property
     def loop(self):
@@ -88,7 +91,7 @@ class GremlinClient:
         lang = lang or self.lang
         op = op or self.op
         processor = processor or self.processor
-        message = ujson.dumps({
+        message = {
             "requestId": str(uuid.uuid4()),
             "op": op,
             "processor": processor,
@@ -97,7 +100,11 @@ class GremlinClient:
                 "bindings": bindings,
                 "language":  lang
             }
-        })
+        }
+        if processor == "session":
+            message["args"]["session"] = str(uuid.uuid4())
+            client_logger.info(
+                "Session ID: {}".format(message["args"]["session"]))
         if connection is None:
             connection = yield from self.pool.connect(self.uri, loop=self.loop)
         writer = GremlinWriter(connection)
