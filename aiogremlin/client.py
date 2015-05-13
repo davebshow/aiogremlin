@@ -146,7 +146,7 @@ class GremlinResponse:
         """
         results = []
         while True:
-            message = yield from self.stream.read()
+            message = yield from self._stream.read()
             if message is None:
                 break
             results.append(message)
