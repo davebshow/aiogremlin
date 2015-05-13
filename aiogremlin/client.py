@@ -6,9 +6,8 @@ import uuid
 
 
 from aiogremlin.connection import WebsocketPool
-from aiogremlin.log import client_logger
+from aiogremlin.log import client_logger, INFO
 from aiogremlin.protocol import gremlin_response_parser, GremlinWriter
-from aiogremlin.log import INFO, client_logger
 
 
 @asyncio.coroutine
