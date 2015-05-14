@@ -85,7 +85,7 @@ class GremlinClient:
 
     @asyncio.coroutine
     def submit(self, gremlin, connection=None, bindings=None, lang=None,
-               op=None, processor=None, binary=True):
+               op=None, processor=None, session=None, binary=True):
         """
         """
         lang = lang or self.lang
@@ -102,14 +102,15 @@ class GremlinClient:
             }
         }
         if processor == "session":
-            message["args"]["session"] = str(uuid.uuid4())
+            session = session or str(uuid.uuid4())
+            message["args"]["session"] = session
             client_logger.info(
                 "Session ID: {}".format(message["args"]["session"]))
         if connection is None:
             connection = yield from self.pool.connect(self.uri, loop=self.loop)
         writer = GremlinWriter(connection)
         connection = yield from writer.write(message, binary=binary)
-        return GremlinResponse(connection, loop=self._loop)
+        return GremlinResponse(connection, session=session, loop=self._loop)
 
     @asyncio.coroutine
     def execute(self, gremlin, bindings=None, lang=None,
@@ -126,13 +127,18 @@ class GremlinClient:
 
 class GremlinResponse:
 
-    def __init__(self, conn, loop=None):
+    def __init__(self, conn, session=None, loop=None):
         self._loop = loop or asyncio.get_event_loop()
+        self._session = session
         self._stream = GremlinResponseStream(conn, loop=self._loop)
 
     @property
     def stream(self):
         return self._stream
+
+    @property
+    def session(self):
+        return self._session
 
     @asyncio.coroutine
     def get(self):

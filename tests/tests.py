@@ -4,6 +4,7 @@
 import asyncio
 import itertools
 import unittest
+import uuid
 from aiogremlin import (GremlinClient, RequestError, GremlinServerError,
     SocketClientError, WebsocketPool, AiohttpFactory, create_client)
 
@@ -76,10 +77,23 @@ class GremlinClientTests(unittest.TestCase):
             error = True
         self.assertTrue(error)
 
-    def test_session(self):
+    def test_session_gen(self):
         execute = self.gc.execute("x + x", processor="session", bindings={"x": 4})
         results = self.loop.run_until_complete(execute)
         self.assertEqual(results[0].data[0], 8)
+
+    def test_session(self):
+        @asyncio.coroutine
+        def stream_coro():
+            session = str(uuid.uuid4())
+            resp = yield from self.gc.submit("x + x", bindings={"x": 4},
+                session=session)
+            while True:
+                f = yield from resp.stream.read()
+                if f is None:
+                    break
+            self.assertEqual(resp.session, session)
+        self.loop.run_until_complete(stream_coro())
 
 
 class WebsocketPoolTests(unittest.TestCase):

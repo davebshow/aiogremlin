@@ -55,7 +55,7 @@ def main(client, tests, count, concurrency, warmups, loop):
     execute = client.execute
     # warmup
     for x in range(warmups):
-        print("Warmup run {}:".format(x))
+        print("Warmup run {}:".format(x + 1))
         yield from run(client, count, concurrency, loop)
     print("Warmup successful!")
     mps_list = []
