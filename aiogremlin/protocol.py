@@ -2,10 +2,15 @@
 
 import asyncio
 import collections
+import uuid
 
-import ujson
+try:
+    import ujson as json
+except ImportError:
+    import json
 
 from aiogremlin.exceptions import RequestError, GremlinServerError
+from aiogremlin.log import logger
 
 
 Message = collections.namedtuple("Message", ["status_code", "data", "message",
@@ -15,7 +20,7 @@ Message = collections.namedtuple("Message", ["status_code", "data", "message",
 def gremlin_response_parser(out, buf):
     while True:
         message = yield
-        message = ujson.loads(message)
+        message = json.loads(message)
         message = Message(message["status"]["code"],
                           message["result"]["data"],
                           message["result"]["meta"],
@@ -46,11 +51,15 @@ class GremlinWriter:
         self._connection = connection
 
     @asyncio.coroutine
-    def write(self, message, binary=True, mime_type="application/json"):
-        message = ujson.dumps(message)
+    def write(self, gremlin, bindings=None, lang="gremlin-groovy", op="eval",
+              processor="", session=None, binary=True,
+              mime_type="application/json"):
+        message = self._prepare_message(gremlin, bindings=bindings,
+            lang=lang, op=op, processor=processor, session=session)
+        message = json.dumps(message)
         if binary:
             message = self._set_message_header(message, mime_type)
-        yield from self._connection.send(message, binary)
+        self._connection.send(message, binary)
         return self._connection
 
     @staticmethod
@@ -61,3 +70,23 @@ class GremlinWriter:
         else:
             raise ValueError("Unknown mime type.")
         return b"".join([mime_len, mime_type, bytes(message, "utf-8")])
+
+    @staticmethod
+    def _prepare_message(gremlin, bindings=None, lang="gremlin-groovy", op="eval",
+                        processor="", session=None):
+        message = {
+            "requestId": str(uuid.uuid4()),
+            "op": op,
+            "processor": processor,
+            "args":{
+                "gremlin": gremlin,
+                "bindings": bindings,
+                "language":  lang
+            }
+        }
+        if processor == "session":
+            session = session or str(uuid.uuid4())
+            message["args"]["session"] = session
+            logger.info(
+                "Session ID: {}".format(message["args"]["session"]))
+        return message

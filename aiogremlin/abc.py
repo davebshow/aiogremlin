@@ -18,32 +18,23 @@ class AbstractFactory(metaclass=ABCMeta):
 
 class AbstractConnection(metaclass=ABCMeta):
 
-    @abstractmethod
-    def feed_pool(self):
-        pass
-
-    @abstractmethod
-    def release(self):
-        pass
-
-    @property
-    @abstractmethod
-    def pool(self):
-        pass
-
-    @property
-    @abstractmethod
-    def closed(self):
-        pass
+    # @property
+    # @abstractmethod
+    # def closed(self):
+    #     pass
 
     @abstractmethod
     def close():
         pass
 
     @abstractmethod
-    def send(self):
+    def _close():
         pass
 
     @abstractmethod
-    def _receive(self):
+    def send(self):
         pass
+
+    # @abstractmethod
+    # def receive(self):
+    #     pass

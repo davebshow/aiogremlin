@@ -2,12 +2,14 @@
 
 import asyncio
 import ssl
-import uuid
 
 import aiohttp
 
-from aiogremlin.connection import WebsocketPool
-from aiogremlin.log import client_logger, INFO
+from aiogremlin.connection import AiohttpFactory
+from aiogremlin.contextmanager import ClientContextManager
+from aiogremlin.exceptions import RequestError
+from aiogremlin.log import logger, INFO
+from aiogremlin.pool import WebSocketPool
 from aiogremlin.protocol import gremlin_response_parser, GremlinWriter
 
 
@@ -16,14 +18,14 @@ def create_client(uri='ws://localhost:8182/', loop=None, ssl=None,
                   protocol=None, lang="gremlin-groovy", op="eval",
                   processor="", pool=None, factory=None, poolsize=10,
                   timeout=None, verbose=False, **kwargs):
-    pool = WebsocketPool(uri,
+    pool = WebSocketPool(uri,
                          factory=factory,
                          poolsize=poolsize,
                          timeout=timeout,
                          loop=loop,
                          verbose=verbose)
 
-    yield from pool.init_pool()
+    yield from pool.fill_pool()
 
     return GremlinClient(uri=uri,
                          loop=loop,
@@ -42,7 +44,7 @@ class GremlinClient:
     def __init__(self, uri='ws://localhost:8182/', loop=None, ssl=None,
                  protocol=None, lang="gremlin-groovy", op="eval",
                  processor="", pool=None, factory=None, poolsize=10,
-                 timeout=None, verbose=True, **kwargs):
+                 timeout=None, verbose=False, **kwargs):
         """
         """
         self.uri = uri
@@ -60,11 +62,15 @@ class GremlinClient:
         self.processor = processor or ""
         self.poolsize = poolsize
         self.timeout = timeout
-        self.pool = pool or WebsocketPool(uri, factory=factory,
-            poolsize=poolsize, timeout=timeout, loop=self._loop)
-        self.factory = factory or self.pool.factory
+        self._pool = pool
+        self._factory = factory or AiohttpFactory
+        if self._pool is None:
+            self._connected = False
+            self._conn = asyncio.async(self._connect(), loop=self._loop)
+        else:
+            self._connected = self._pool._connected
         if verbose:
-            client_logger.setLevel(INFO)
+            logger.setLevel(INFO)
 
     @property
     def loop(self):
@@ -72,45 +78,54 @@ class GremlinClient:
 
     @asyncio.coroutine
     def close(self):
-        yield from self.pool.close()
+        try:
+            if self._pool:
+                yield from self._pool.close()
+            elif self._connected:
+                yield from self._conn.close()
+        finally:
+            self._connected = False
 
     @asyncio.coroutine
-    def connect(self, **kwargs):
+    def _connect(self, **kwargs):
         """
         """
-        loop = kwargs.get("loop", "") or self.loop
-        connection = yield from self.factory.connect(self.uri, loop=loop,
-            **kwargs)
+        loop = kwargs.get("loop", "") or self._loop
+        connection = yield from self._factory.connect(self.uri, loop=loop)
+        self._connected = True
         return connection
 
     @asyncio.coroutine
-    def submit(self, gremlin, connection=None, bindings=None, lang=None,
-               op=None, processor=None, session=None, binary=True):
+    def _acquire(self, **kwargs):
+        if self._pool:
+            conn = yield from self._pool.acquire()
+        elif self._connected:
+            conn = self._conn
+        else:
+            conn = yield from self._conn
+        return conn
+            # Check here for error
+            # except Error:
+                # conn = yield from self._connect()
+
+    @asyncio.coroutine
+    def submit(self, gremlin, conn=None, bindings=None, lang=None, op=None,
+               processor=None, session=None, binary=True):
         """
         """
         lang = lang or self.lang
         op = op or self.op
         processor = processor or self.processor
-        message = {
-            "requestId": str(uuid.uuid4()),
-            "op": op,
-            "processor": processor,
-            "args":{
-                "gremlin": gremlin,
-                "bindings": bindings,
-                "language":  lang
-            }
-        }
-        if processor == "session":
-            session = session or str(uuid.uuid4())
-            message["args"]["session"] = session
-            client_logger.info(
-                "Session ID: {}".format(message["args"]["session"]))
-        if connection is None:
-            connection = yield from self.pool.connect(self.uri, loop=self.loop)
-        writer = GremlinWriter(connection)
-        connection = yield from writer.write(message, binary=binary)
-        return GremlinResponse(connection, session=session, loop=self._loop)
+        if conn is None:
+            conn = yield from self._acquire()
+        writer = GremlinWriter(conn)
+        conn = yield from writer.write(gremlin, bindings=bindings,
+            lang=lang, op=op, processor=processor, session=session,
+            binary=binary)
+        return GremlinResponse(conn,
+                               self,
+                               session=session,
+                               loop=self._loop)
 
     @asyncio.coroutine
     def execute(self, gremlin, bindings=None, lang=None,
@@ -127,10 +142,11 @@ class GremlinClient:
 
 class GremlinResponse:
 
-    def __init__(self, conn, session=None, loop=None):
+    def __init__(self, conn, client, session=None, loop=None):
         self._loop = loop or asyncio.get_event_loop()
+        self._client = client
         self._session = session
-        self._stream = GremlinResponseStream(conn, loop=self._loop)
+        self._stream = GremlinResponseStream(conn, self, loop=self._loop)
 
     @property
     def stream(self):
@@ -156,11 +172,24 @@ class GremlinResponse:
             results.append(message)
         return results
 
+    # aioredis style
+    def __enter__(self):
+        raise RuntimeError(
+            "'yield from' should be used as a context manager expression")
+
+    def __exit__(self, *args):
+        pass
+
+    def __iter__(self):
+        yield from self._pool.create_pool()
+        return ClientContextManager(self)
+
 
 class GremlinResponseStream:
 
-    def __init__(self, conn, loop=None):
+    def __init__(self, conn, resp, loop=None):
         self._conn = conn
+        self._resp = resp
         self._loop = loop or asyncio.get_event_loop()
         data_stream = aiohttp.DataQueue(loop=self._loop)
         self._stream = self._conn.parser.set_parser(gremlin_response_parser,
@@ -170,13 +199,20 @@ class GremlinResponseStream:
     def read(self):
         # For 3.0.0.M9
         # if self._stream.at_eof():
-        #     self._conn.feed_pool()
+        #     self._pool.release(self._conn)
         #     message = None
         # else:
         # This will be different 3.0.0.M9
-        yield from self._conn._receive()
+        pool = self._resp._client._pool
+        try:
+            yield from self._conn.read()
+        except RequestError:
+            if pool:
+                pool.release(self._conn)
+            print("fed pool")
         if self._stream.is_eof():
-            self._conn.feed_pool()
+            if pool:
+                pool.release(self._conn)
             message = None
         else:
             message = yield from self._stream.read()

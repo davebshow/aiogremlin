@@ -6,16 +6,19 @@ import itertools
 import unittest
 import uuid
 from aiogremlin import (GremlinClient, RequestError, GremlinServerError,
-    SocketClientError, WebsocketPool, AiohttpFactory, create_client)
+    SocketClientError, WebSocketPool, AiohttpFactory, create_client,
+    GremlinWriter, GremlinResponse)
 
 #
-class GremlinClientTests(unittest.TestCase):
+class GremlinClientPoolTests(unittest.TestCase):
 
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
         self.gc = GremlinClient("ws://localhost:8182/",
-            factory=AiohttpFactory, loop=self.loop)
+            factory=AiohttpFactory, pool=WebSocketPool("ws://localhost:8182/",
+                                                       loop=self.loop),
+            loop=self.loop)
 
     def tearDown(self):
         self.loop.run_until_complete(self.gc.close())
@@ -24,7 +27,7 @@ class GremlinClientTests(unittest.TestCase):
     def test_connection(self):
         @asyncio.coroutine
         def conn_coro():
-            conn = yield from self.gc.connect()
+            conn = yield from self.gc._acquire()
             self.assertFalse(conn.closed)
             return conn
         conn = self.loop.run_until_complete(conn_coro())
@@ -96,12 +99,12 @@ class GremlinClientTests(unittest.TestCase):
         self.loop.run_until_complete(stream_coro())
 
 
-class WebsocketPoolTests(unittest.TestCase):
+class WebSocketPoolTests(unittest.TestCase):
 
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        self.pool = WebsocketPool(poolsize=2, timeout=1, loop=self.loop,
+        self.pool = WebSocketPool(poolsize=2, timeout=1, loop=self.loop,
             factory=AiohttpFactory)
 
     def tearDown(self):
@@ -112,10 +115,9 @@ class WebsocketPoolTests(unittest.TestCase):
 
         @asyncio.coroutine
         def conn():
-            conn = yield from self.pool.connect()
-            self.assertIsNotNone(conn.socket)
+            conn = yield from self.pool.acquire()
             self.assertFalse(conn.closed)
-            conn.feed_pool()
+            self.pool.release(conn)
             self.assertEqual(self.pool.num_active_conns, 0)
 
         self.loop.run_until_complete(conn())
@@ -124,15 +126,13 @@ class WebsocketPoolTests(unittest.TestCase):
 
         @asyncio.coroutine
         def conn():
-            conn1 = yield from self.pool.connect()
-            conn2 = yield from self.pool.connect()
-            self.assertIsNotNone(conn1.socket)
+            conn1 = yield from self.pool.acquire()
+            conn2 = yield from self.pool.acquire()
             self.assertFalse(conn1.closed)
-            self.assertIsNotNone(conn2.socket)
             self.assertFalse(conn2.closed)
-            conn1.feed_pool()
+            self.pool.release(conn1)
             self.assertEqual(self.pool.num_active_conns, 1)
-            conn2.feed_pool()
+            self.pool.release(conn2)
             self.assertEqual(self.pool.num_active_conns, 0)
 
         self.loop.run_until_complete(conn())
@@ -141,10 +141,10 @@ class WebsocketPoolTests(unittest.TestCase):
 
         @asyncio.coroutine
         def conn():
-            conn1 = yield from self.pool.connect()
-            conn2 = yield from self.pool.connect()
+            conn1 = yield from self.pool.acquire()
+            conn2 = yield from self.pool.acquire()
             try:
-                conn3 = yield from self.pool.connect()
+                conn3 = yield from self.pool.acquire()
                 timeout = False
             except asyncio.TimeoutError:
                 timeout = True
@@ -156,21 +156,19 @@ class WebsocketPoolTests(unittest.TestCase):
 
         @asyncio.coroutine
         def conn():
-            conn1 = yield from self.pool.connect()
-            conn2 = yield from self.pool.connect()
+            conn1 = yield from self.pool.acquire()
+            conn2 = yield from self.pool.acquire()
             try:
-                conn3 = yield from self.pool.connect()
+                conn3 = yield from self.pool.acquire()
                 timeout = False
             except asyncio.TimeoutError:
                 timeout = True
             self.assertTrue(timeout)
-            conn2.feed_pool()
-            conn3 = yield from self.pool.connect()
-            self.assertIsNotNone(conn1.socket)
+            self.pool.release(conn2)
+            conn3 = yield from self.pool.acquire()
             self.assertFalse(conn1.closed)
-            self.assertIsNotNone(conn3.socket)
             self.assertFalse(conn3.closed)
-            self.assertEqual(conn2.socket, conn3.socket)
+            self.assertEqual(conn2, conn3)
 
         self.loop.run_until_complete(conn())
 
@@ -178,26 +176,53 @@ class WebsocketPoolTests(unittest.TestCase):
 
         @asyncio.coroutine
         def conn():
-            conn1 = yield from self.pool.connect()
-            conn2 = yield from self.pool.connect()
-            self.assertIsNotNone(conn1.socket)
+            conn1 = yield from self.pool.acquire()
+            conn2 = yield from self.pool.acquire()
             self.assertFalse(conn1.closed)
-            self.assertIsNotNone(conn2.socket)
             self.assertFalse(conn2.closed)
-            yield from conn1.socket.close()
-            yield from conn2.socket.close()
+            yield from conn1.close()
+            yield from conn2.close()
             self.assertTrue(conn2.closed)
             self.assertTrue(conn2.closed)
-            conn1.feed_pool()
-            conn2.feed_pool()
-            conn1 = yield from self.pool.connect()
-            conn2 = yield from self.pool.connect()
-            self.assertIsNotNone(conn1.socket)
+            self.pool.release(conn1)
+            self.pool.release(conn2)
+            conn1 = yield from self.pool.acquire()
+            conn2 = yield from self.pool.acquire()
             self.assertFalse(conn1.closed)
-            self.assertIsNotNone(conn2.socket)
             self.assertFalse(conn2.closed)
 
         self.loop.run_until_complete(conn())
+#
+# class ContextMngrTest(unittest.TestCase):
+#
+#     def setUp(self):
+#         self.loop = asyncio.new_event_loop()
+#         asyncio.set_event_loop(None)
+#         self.pool = WebSocketPool(poolsize=1, loop=self.loop,
+#             factory=AiohttpFactory)
+#
+#     def tearDown(self):
+#         self.loop.run_until_complete(self.pool.close())
+#         self.loop.close()
+#
+#     def test_connection_manager(self):
+#         results = []
+#         @asyncio.coroutine
+#         def go():
+#
+#             # import ipdb; ipdb.set_trace()
+#             with (yield from self.pool) as conn:
+#                 writer = GremlinWriter(conn)
+#                 conn = yield from writer.write("1 + 1")
+#                 resp = GremlinResponse(conn, loop=self.loop)
+#                 while True:
+#                     mssg = yield from resp.stream.read()
+#                     if mssg is None:
+#                         break
+#                     results.append(mssg)
+#             conn = self.pool._pool.get_nowait()
+#             self.assertTrue(conn.closed)
+#         self.loop.run_until_complete(go())
 
 
 class CreateClientTests(unittest.TestCase):
@@ -206,7 +231,8 @@ class CreateClientTests(unittest.TestCase):
         @asyncio.coroutine
         def go(loop):
             gc = yield from create_client(poolsize=10, loop=loop)
-            self.assertEqual(gc.pool.pool.qsize(), 10)
+            self.assertEqual(gc._pool._pool.qsize(), 10)
+            yield from gc.close()
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)

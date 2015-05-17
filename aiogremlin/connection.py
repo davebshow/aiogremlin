@@ -1,128 +1,85 @@
 """
 """
 import asyncio
+import base64
+import hashlib
+import os
 
-import aiohttp
+from aiohttp import (client, hdrs, DataQueue, StreamParser,
+    WSServerHandshakeError)
+from aiohttp.errors import WSServerHandshakeError
+from aiohttp.websocket import WS_KEY, Message
+from aiohttp.websocket import WebSocketParser, WebSocketWriter, WebSocketError
+from aiohttp.websocket import (MSG_BINARY, MSG_TEXT, MSG_CLOSE, MSG_PING,
+    MSG_PONG)
+from aiohttp.websocket_client import (MsgType, closedMessage,
+    ClientWebSocketResponse)
 
 from aiogremlin.abc import AbstractFactory, AbstractConnection
 from aiogremlin.exceptions import SocketClientError
-from aiogremlin.log import INFO, conn_logger
+from aiogremlin.log import INFO, logger
 
 
-class WebsocketPool:
+# This is temporary until aiohttp pull #367 is merged/released.
+@asyncio.coroutine
+def ws_connect(url, protocols=(), timeout=10.0, connector=None,
+               response_class=None, autoclose=True, autoping=True, loop=None):
+    """Initiate websocket connection."""
+    if loop is None:
+        loop = asyncio.get_event_loop()
 
-    def __init__(self, uri='ws://localhost:8182/', factory=None, poolsize=10,
-                 max_retries=10, timeout=None, loop=None, verbose=False):
-        """
-        """
-        self.uri = uri
-        self._factory = factory or AiohttpFactory
-        self.poolsize = poolsize
-        self.max_retries = max_retries
-        self.timeout = timeout
-        self._loop = loop or asyncio.get_event_loop()
-        self.pool = asyncio.Queue(maxsize=self.poolsize, loop=self._loop)
-        self.active_conns = set()
-        self.num_connecting = 0
-        self._closed = False
-        if verbose:
-            conn_logger.setLevel(INFO)
+    sec_key = base64.b64encode(os.urandom(16))
 
-    @asyncio.coroutine
-    def init_pool(self):
-        for i in range(self.poolsize):
-            conn = yield from self.factory.connect(self.uri, pool=self,
-                loop=self._loop)
-            self._put(conn)
+    headers = {
+        hdrs.UPGRADE: hdrs.WEBSOCKET,
+        hdrs.CONNECTION: hdrs.UPGRADE,
+        hdrs.SEC_WEBSOCKET_VERSION: '13',
+        hdrs.SEC_WEBSOCKET_KEY: sec_key.decode(),
+    }
+    if protocols:
+        headers[hdrs.SEC_WEBSOCKET_PROTOCOL] = ','.join(protocols)
 
-    @property
-    def loop(self):
-        return self._loop
+    # send request
+    resp = yield from client.request(
+        'get', url, headers=headers,
+        read_until_eof=False,
+        connector=connector, loop=loop)
 
-    @property
-    def factory(self):
-        return self._factory
+    # check handshake
+    if resp.status != 101:
+        raise WSServerHandshakeError('Invalid response status')
 
-    @property
-    def closed(self):
-        return self._closed
+    if resp.headers.get(hdrs.UPGRADE, '').lower() != 'websocket':
+        raise WSServerHandshakeError('Invalid upgrade header')
 
-    @property
-    def num_active_conns(self):
-        return len(self.active_conns)
+    if resp.headers.get(hdrs.CONNECTION, '').lower() != 'upgrade':
+        raise WSServerHandshakeError('Invalid connection header')
 
-    def feed_pool(self, conn):
-        if self._closed:
-            raise RuntimeError("WebsocketPool is closed.")
-        self.active_conns.discard(conn)
-        self._put(conn)
+    # key calculation
+    key = resp.headers.get(hdrs.SEC_WEBSOCKET_ACCEPT, '')
+    match = base64.b64encode(hashlib.sha1(sec_key + WS_KEY).digest()).decode()
+    if key != match:
+        raise WSServerHandshakeError('Invalid challenge response')
 
-    @asyncio.coroutine
-    def close(self):
-        if not self._closed:
-            if self.active_conns:
-                yield from self._close_active_conns()
-            yield from self._purge_pool()
-            self._closed = True
+    # websocket protocol
+    protocol = None
+    if protocols and hdrs.SEC_WEBSOCKET_PROTOCOL in resp.headers:
+        resp_protocols = [proto.strip() for proto in
+                          resp.headers[hdrs.SEC_WEBSOCKET_PROTOCOL].split(',')]
 
-    @asyncio.coroutine
-    def _close_active_conns(self):
-        tasks = [asyncio.async(conn.close(), loop=self.loop) for conn
-            in self.active_conns]
-        yield from asyncio.wait(tasks, loop=self.loop)
-
-    @asyncio.coroutine
-    def _purge_pool(self):
-        while True:
-            try:
-                conn = self.pool.get_nowait()
-            except asyncio.QueueEmpty:
+        for proto in resp_protocols:
+            if proto in protocols:
+                protocol = proto
                 break
-            else:
-                yield from conn.close()
 
-    @asyncio.coroutine
-    def connect(self, uri=None, loop=None, num_retries=None):
-        if self._closed:
-            raise RuntimeError("WebsocketPool is closed.")
-        if num_retries is None:
-            num_retries = self.max_retries
-        uri = uri or self.uri
-        loop = loop or self.loop
-        if not self.pool.empty():
-            socket = self.pool.get_nowait()
-            conn_logger.info("Reusing socket: {} at {}".format(socket, uri))
-        elif self.num_active_conns + self.num_connecting >= self.poolsize:
-            conn_logger.info("Waiting for socket...")
-            socket = yield from asyncio.wait_for(self.pool.get(),
-                self.timeout, loop=loop)
-            conn_logger.info("Socket acquired: {} at {}".format(socket, uri))
-        else:
-            self.num_connecting += 1
-            try:
-                socket = yield from self.factory.connect(uri, pool=self,
-                    loop=loop)
-            finally:
-                self.num_connecting -= 1
-        if not socket.closed:
-            conn_logger.info("New connection on socket: {} at {}".format(
-                socket, uri))
-            self.active_conns.add(socket)
-        # Untested.
-        elif num_retries > 0:
-            conn_logger.warning("Got bad socket, retry...")
-            socket = yield from self.connect(uri, loop, num_retries - 1)
-        else:
-            raise RuntimeError("Unable to connect, max retries exceeded.")
-        return socket
+    reader = resp.connection.reader.set_parser(WebSocketParser)
+    writer = WebSocketWriter(resp.connection.writer, use_mask=True)
 
-    def _put(self, socket):
-        try:
-            self.pool.put_nowait(socket)
-        except asyncio.QueueFull:
-            pass
-            # This should be - not working
-            # yield from socket.release()
+    if response_class is None:
+        response_class = ClientWebSocketResponse
+
+    return response_class(
+        reader, writer, protocol, resp, timeout, autoclose, autoping, loop)
 
 
 class BaseFactory(AbstractFactory):
@@ -141,107 +98,163 @@ class AiohttpFactory(BaseFactory):
         if pool:
             loop = loop or pool.loop
         try:
-            socket = yield from aiohttp.ws_connect(uri, protocols=protocols,
-                connector=connector, autoclose=False, autoping=True,
-                loop=loop)
-        except aiohttp.WSServerHandshakeError as e:
+            return (yield from ws_connect(
+                uri, protocols=protocols, connector=connector,
+                response_class=GremlinClientWebSocketResponse,
+                autoclose=True, autoping=True, loop=loop))
+        except WSServerHandshakeError as e:
             raise SocketClientError(e.message)
-        return AiohttpConnection(socket, pool, loop=loop)
 
 
 class BaseConnection(AbstractConnection):
 
-    def __init__(self, socket, pool=None, loop=None):
-        self.socket = socket
+    def __init__(self, loop=None):
         self._loop = loop or asyncio.get_event_loop()
-        self._pool = pool
-        self._parser = aiohttp.StreamParser(
-            buf=aiohttp.DataQueue(loop=self._loop), loop=self._loop)
+        self._parser = StreamParser(
+            buf=DataQueue(loop=self._loop), loop=self._loop)
 
     @property
     def parser(self):
         return self._parser
 
-    def feed_pool(self):
-        if self.pool:
-            if self in self.pool.active_conns:
-                self.pool.feed_pool(self)
+
+class GremlinClientWebSocketResponse(BaseConnection, ClientWebSocketResponse):
+
+    def __init__(self, reader, writer, protocol, response, timeout, autoclose,
+                 autoping, loop):
+        BaseConnection.__init__(self, loop=loop)
+        ClientWebSocketResponse.__init__(self, reader, writer, protocol,
+            response, timeout, autoclose, autoping, loop)
 
     @asyncio.coroutine
-    def release(self):
+    def close(self, *, code=1000, message=b''):
+        if not self._closed:
+            self._closed = True
+            closed = self._close()
+            if closed:
+                return True
+            while True:
+                try:
+                    msg = yield from asyncio.wait_for(
+                        self._reader.read(), self._timeout, loop=self._loop)
+                except asyncio.CancelledError:
+                    self._close_code = 1006
+                    self._response.close(force=True)
+                    raise
+                except Exception as exc:
+                    self._close_code = 1006
+                    self._exception = exc
+                    self._response.close(force=True)
+                    return True
+
+                if msg.tp == MsgType.close:
+                    self._close_code = msg.data
+                    self._response.close(force=True)
+                    return True
+        else:
+            return False
+
+    def _close(self):
         try:
-            yield from self.close()
-        finally:
-            if self in self.pool.active_conns:
-                self.pool.active_conns.discard(self)
+            self._writer.close(code, message)
+        except asyncio.CancelledError:
+            self._close_code = 1006
+            self._response.close(force=True)
+            raise
+        except Exception as exc:
+            self._close_code = 1006
+            self._exception = exc
+            self._response.close(force=True)
+            return True
 
-    @property
-    def pool(self):
-        return self._pool
+        if self._closing:
+            self._response.close(force=True)
+            return True
 
-
-class AiohttpConnection(BaseConnection):
-
-    @property
-    def closed(self):
-        return self.socket.closed
-
-    @asyncio.coroutine
-    def close(self):
-        if not self.socket._closed:
-            try:
-                yield from self.socket.close()
-            finally:
-                # Socket should close despite errors.
-                self._closed = True
-
-    @asyncio.coroutine
+    # @asyncio.coroutine
     def send(self, message, binary=True):
         if binary:
-            method = self.socket.send_bytes
+            method = self.send_bytes
         else:
-            method = self.socket.send_str
+            method = self.send_str
         try:
             method(message)
         except RuntimeError:
             # Socket closed.
-            yield from self.release()
             raise
         except TypeError:
             # Bytes/string input error.
-            yield from self.release()
             raise
 
     @asyncio.coroutine
-    def _receive(self):
+    def read(self):
         """Implements a dispatcher using the aiohttp websocket protocol."""
         try:
-            message = yield from self.socket.receive()
+            message = yield from self.receive()
         except (asyncio.CancelledError, asyncio.TimeoutError):
-            yield from self.release()
+            # Hmm maybe don't close here
+            yield from self.close()
             raise
-        except RuntimeError:
-            yield from self.release()
-            raise
-        if message.tp == aiohttp.MsgType.binary:
+        if message.tp == MsgType.binary:
             try:
                 self.parser.feed_data(message.data.decode())
             except Exception:
-                self.release()
+                # Hmm maybe don't close here
+                yield from self.close()
                 raise
-        elif message.tp == aiohttp.MsgType.text:
+        elif message.tp == MsgType.text:
             try:
                 self.parser.feed_data(message.data.strip())
             except Exception:
-                self.release()
+                # Hmm maybe don't close here
+                yield from self.close()
                 raise
         else:
-            try:
-                if message.tp == aiohttp.MsgType.close:
-                    raise RuntimeError("Socket connection closed by server.")
-                elif message.tp == aiohttp.MsgType.error:
-                    raise SocketClientError(self.socket.exception())
-                elif message.tp == aiohttp.MsgType.closed:
-                    raise RuntimeError("Socket closed.")
-            finally:
-                yield from self.release()
+            if message.tp == MsgType.close:
+                raise RuntimeError("Socket connection closed by server.")
+            elif message.tp == MsgType.error:
+                raise SocketClientError(self.socket.exception())
+            elif message.tp == MsgType.closed:
+                raise RuntimeError("Socket closed.")
+
+    # @asyncio.coroutine
+    # def receive(self):
+    #     if self._waiting:
+    #         raise RuntimeError('Concurrent call to receive() is not allowed')
+    #
+    #     self._waiting = True
+    #     try:
+    #         while True:
+    #             if self._closed:
+    #                 return closedMessage
+    #
+    #             try:
+    #                 msg = yield from self._reader.read()
+    #             except (asyncio.CancelledError, asyncio.TimeoutError):
+    #                 raise
+    #             except WebSocketError as exc:
+    #                 self._close_code = exc.code
+    #                 yield from self.close(code=exc.code)
+    #                 return Message(MsgType.error, exc, None)
+    #             except Exception as exc:
+    #                 self._exception = exc
+    #                 self._closing = True
+    #                 self._close_code = 1006
+    #                 yield from self.close()
+    #                 return Message(MsgType.error, exc, None)
+    #
+    #             if msg.tp == MsgType.close:
+    #                 self._closing = True
+    #                 self._close_code = msg.data
+    #                 if not self._closed and self._autoclose:
+    #                     yield from self.close()
+    #                 return msg
+    #             elif not self._closed:
+    #                 if msg.tp == MsgType.ping and self._autoping:
+    #                     self._writer.pong(msg.data)
+    #                 elif msg.tp == MsgType.pong and self._autoping:
+    #                     continue
+    #                 else:
+    #                     return msg
+    #     finally:
+    #         self._waiting = False
