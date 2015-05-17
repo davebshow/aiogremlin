@@ -50,7 +50,6 @@ class GremlinWriter:
     def __init__(self, connection):
         self._connection = connection
 
-    @asyncio.coroutine
     def write(self, gremlin, bindings=None, lang="gremlin-groovy", op="eval",
               processor="", session=None, binary=True,
               mime_type="application/json"):

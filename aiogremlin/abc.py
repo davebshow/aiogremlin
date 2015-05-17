@@ -18,10 +18,10 @@ class AbstractFactory(metaclass=ABCMeta):
 
 class AbstractConnection(metaclass=ABCMeta):
 
-    # @property
-    # @abstractmethod
-    # def closed(self):
-    #     pass
+    @property
+    @abstractmethod
+    def closed(self):
+        pass
 
     @abstractmethod
     def close():
@@ -35,6 +35,6 @@ class AbstractConnection(metaclass=ABCMeta):
     def send(self):
         pass
 
-    # @abstractmethod
-    # def receive(self):
-    #     pass
+    @abstractmethod
+    def receive(self):
+        pass

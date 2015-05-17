@@ -126,10 +126,14 @@ class GremlinClientWebSocketResponse(BaseConnection, ClientWebSocketResponse):
         ClientWebSocketResponse.__init__(self, reader, writer, protocol,
             response, timeout, autoclose, autoping, loop)
 
+    @property
+    def closed(self):
+        """Required by ABC."""
+        return self._closed
+
     @asyncio.coroutine
     def close(self, *, code=1000, message=b''):
         if not self._closed:
-            self._closed = True
             closed = self._close()
             if closed:
                 return True
@@ -155,6 +159,7 @@ class GremlinClientWebSocketResponse(BaseConnection, ClientWebSocketResponse):
             return False
 
     def _close(self):
+        self._closed = True
         try:
             self._writer.close(code, message)
         except asyncio.CancelledError:
@@ -171,7 +176,6 @@ class GremlinClientWebSocketResponse(BaseConnection, ClientWebSocketResponse):
             self._response.close(force=True)
             return True
 
-    # @asyncio.coroutine
     def send(self, message, binary=True):
         if binary:
             method = self.send_bytes
@@ -187,74 +191,46 @@ class GremlinClientWebSocketResponse(BaseConnection, ClientWebSocketResponse):
             raise
 
     @asyncio.coroutine
-    def read(self):
-        """Implements a dispatcher using the aiohttp websocket protocol."""
-        try:
-            message = yield from self.receive()
-        except (asyncio.CancelledError, asyncio.TimeoutError):
-            # Hmm maybe don't close here
-            yield from self.close()
-            raise
-        if message.tp == MsgType.binary:
-            try:
-                self.parser.feed_data(message.data.decode())
-            except Exception:
-                # Hmm maybe don't close here
-                yield from self.close()
-                raise
-        elif message.tp == MsgType.text:
-            try:
-                self.parser.feed_data(message.data.strip())
-            except Exception:
-                # Hmm maybe don't close here
-                yield from self.close()
-                raise
-        else:
-            if message.tp == MsgType.close:
-                raise RuntimeError("Socket connection closed by server.")
-            elif message.tp == MsgType.error:
-                raise SocketClientError(self.socket.exception())
-            elif message.tp == MsgType.closed:
-                raise RuntimeError("Socket closed.")
+    def receive(self):
+        if self._waiting:
+            raise RuntimeError('Concurrent call to receive() is not allowed')
 
-    # @asyncio.coroutine
-    # def receive(self):
-    #     if self._waiting:
-    #         raise RuntimeError('Concurrent call to receive() is not allowed')
-    #
-    #     self._waiting = True
-    #     try:
-    #         while True:
-    #             if self._closed:
-    #                 return closedMessage
-    #
-    #             try:
-    #                 msg = yield from self._reader.read()
-    #             except (asyncio.CancelledError, asyncio.TimeoutError):
-    #                 raise
-    #             except WebSocketError as exc:
-    #                 self._close_code = exc.code
-    #                 yield from self.close(code=exc.code)
-    #                 return Message(MsgType.error, exc, None)
-    #             except Exception as exc:
-    #                 self._exception = exc
-    #                 self._closing = True
-    #                 self._close_code = 1006
-    #                 yield from self.close()
-    #                 return Message(MsgType.error, exc, None)
-    #
-    #             if msg.tp == MsgType.close:
-    #                 self._closing = True
-    #                 self._close_code = msg.data
-    #                 if not self._closed and self._autoclose:
-    #                     yield from self.close()
-    #                 return msg
-    #             elif not self._closed:
-    #                 if msg.tp == MsgType.ping and self._autoping:
-    #                     self._writer.pong(msg.data)
-    #                 elif msg.tp == MsgType.pong and self._autoping:
-    #                     continue
-    #                 else:
-    #                     return msg
-    #     finally:
-    #         self._waiting = False
+        self._waiting = True
+        try:
+            while True:
+                if self._closed:
+                    return closedMessage
+
+                try:
+                    msg = yield from self._reader.read()
+                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    raise
+                except WebSocketError as exc:
+                    self._close_code = exc.code
+                    yield from self.close(code=exc.code)
+                    raise
+                except Exception as exc:
+                    self._exception = exc
+                    self._closing = True
+                    self._close_code = 1006
+                    yield from self.close()
+                    raise
+                if msg.tp == MsgType.close:
+                    self._closing = True
+                    self._close_code = msg.data
+                    if not self._closed and self._autoclose:
+                        yield from self.close()
+                    raise RuntimeError("Socket connection closed by server.")
+                elif not self._closed:
+                    if msg.tp == MsgType.ping and self._autoping:
+                        self._writer.pong(msg.data)
+                    elif msg.tp == MsgType.pong and self._autoping:
+                        continue
+                    else:
+                        if msg.tp == MsgType.binary:
+                            self.parser.feed_data(msg.data.decode())
+                        elif msg.tp == MsgType.text:
+                            self.parser.feed_data(msg.data.strip())
+                        break
+        finally:
+            self._waiting = False
