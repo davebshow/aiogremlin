@@ -134,8 +134,8 @@ class GremlinClientWebSocketResponse(BaseConnection, ClientWebSocketResponse):
     @asyncio.coroutine
     def close(self, *, code=1000, message=b''):
         if not self._closed:
-            closed = self._close()
-            if closed:
+            do_close = self._close()
+            if do_close:
                 return True
             while True:
                 try:
@@ -158,7 +158,7 @@ class GremlinClientWebSocketResponse(BaseConnection, ClientWebSocketResponse):
         else:
             return False
 
-    def _close(self):
+    def _close(self, code=1000, message=b''):
         self._closed = True
         try:
             self._writer.close(code, message)

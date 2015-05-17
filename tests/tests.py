@@ -229,7 +229,7 @@ class ContextMngrTest(unittest.TestCase):
             factory=AiohttpFactory, max_retries=0)
 
     def tearDown(self):
-        # self.loop.run_until_complete(self.pool.close())
+        self.loop.run_until_complete(self.pool.close())
         self.loop.close()
 
     def test_connection_manager(self):

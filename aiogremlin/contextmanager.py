@@ -11,6 +11,7 @@ class ConnectionContextManager:
 
     def __exit__(self, exception_type, exception_value, traceback):
         try:
+            self._conn._closing = True
             self._conn._close()
         finally:
             self._conn = None
