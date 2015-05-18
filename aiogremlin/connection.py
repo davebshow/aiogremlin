@@ -231,6 +231,8 @@ class GremlinClientWebSocketResponse(BaseConnection, ClientWebSocketResponse):
                             self.parser.feed_data(msg.data.decode())
                         elif msg.tp == MsgType.text:
                             self.parser.feed_data(msg.data.strip())
+                        else:
+                            raise RuntimeError("Unknown message type.")
                         break
         finally:
             self._waiting = False
