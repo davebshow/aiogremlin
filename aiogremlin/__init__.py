@@ -1,5 +1,6 @@
 from .abc import AbstractFactory, AbstractConnection
-from .connection import AiohttpFactory, BaseFactory, BaseConnection
+from .connection import (AiohttpFactory, BaseFactory, BaseConnection,
+    WebSocketSession)
 from .client import (create_client, GremlinClient, GremlinResponse,
     GremlinResponseStream)
 from .exceptions import RequestError, GremlinServerError, SocketClientError

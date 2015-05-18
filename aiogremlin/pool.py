@@ -1,6 +1,7 @@
 import asyncio
 
-from aiogremlin.connection import AiohttpFactory
+from aiogremlin.connection import (AiohttpFactory,
+    GremlinClientWebSocketResponse)
 from aiogremlin.contextmanager import ConnectionContextManager
 from aiogremlin.log import logger
 
@@ -11,11 +12,12 @@ def create_pool():
 
 class WebSocketPool:
 
-    def __init__(self, uri='ws://localhost:8182/', factory=None, poolsize=10,
-                 max_retries=10, timeout=None, loop=None, verbose=False):
+    def __init__(self, url='ws://localhost:8182/', factory=None, poolsize=10,
+                 max_retries=10, timeout=None, loop=None, verbose=False,
+                 response_class=None):
         """
         """
-        self.uri = uri
+        self.url = url
         self._factory = factory or AiohttpFactory
         self.poolsize = poolsize
         self.max_retries = max_retries
@@ -25,15 +27,21 @@ class WebSocketPool:
         self._pool = asyncio.Queue(maxsize=self.poolsize, loop=self._loop)
         self.active_conns = set()
         self.num_connecting = 0
+        self._response_class = response_class or GremlinClientWebSocketResponse
         self._closed = False
         if verbose:
             logger.setLevel(INFO)
 
     @asyncio.coroutine
     def fill_pool(self):
-        for i in range(self.poolsize):
-            conn = yield from self.factory.connect(self.uri, pool=self,
-                loop=self._loop)
+        tasks = []
+        poolsize = self.poolsize
+        for i in range(poolsize):
+            task = asyncio.async(self.factory.ws_connect(self.url,
+                response_class=self._response_class, loop=self._loop), loop=self._loop)
+            tasks.append(task)
+        for f in asyncio.as_completed(tasks, loop=self._loop):
+            conn = yield from f
             self._put(conn)
         self._connected = True
 
@@ -84,36 +92,36 @@ class WebSocketPool:
                 yield from conn.close()
 
     @asyncio.coroutine
-    def acquire(self, uri=None, loop=None, num_retries=None):
+    def acquire(self, url=None, loop=None, num_retries=None):
         if self._closed:
             raise RuntimeError("WebsocketPool is closed.")
         if num_retries is None:
             num_retries = self.max_retries
-        uri = uri or self.uri
+        url = url or self.url
         loop = loop or self.loop
         if not self._pool.empty():
             socket = self._pool.get_nowait()
-            logger.info("Reusing socket: {} at {}".format(socket, uri))
+            logger.info("Reusing socket: {} at {}".format(socket, url))
         elif self.num_active_conns + self.num_connecting >= self.poolsize:
             logger.info("Waiting for socket...")
             socket = yield from asyncio.wait_for(self._pool.get(),
                 self.timeout, loop=loop)
-            logger.info("Socket acquired: {} at {}".format(socket, uri))
+            logger.info("Socket acquired: {} at {}".format(socket, url))
         else:
             self.num_connecting += 1
             try:
-                socket = yield from self.factory.connect(uri, pool=self,
-                    loop=loop)
+                socket = yield from self.factory.ws_connect(url,
+                    response_class=self._response_class, loop=loop)
             finally:
                 self.num_connecting -= 1
         if not socket.closed:
             logger.info("New connection on socket: {} at {}".format(
-                socket, uri))
+                socket, url))
             self.active_conns.add(socket)
         # Untested.
         elif num_retries > 0:
             logger.warning("Got bad socket, retry...")
-            socket = yield from self.acquire(uri, loop, num_retries - 1)
+            socket = yield from self.acquire(url, loop, num_retries - 1)
         else:
             raise RuntimeError("Unable to connect, max retries exceeded.")
         return socket

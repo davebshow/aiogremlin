@@ -5,14 +5,8 @@ from abc import ABCMeta, abstractmethod
 
 class AbstractFactory(metaclass=ABCMeta):
 
-    @classmethod
     @abstractmethod
-    def connect(cls):
-        pass
-
-    @property
-    @abstractmethod
-    def factory(self):
+    def ws_connect(cls):
         pass
 
 

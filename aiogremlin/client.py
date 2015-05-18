@@ -62,7 +62,7 @@ class GremlinClient:
         self.poolsize = poolsize
         self.timeout = timeout
         self._pool = pool
-        self._factory = factory or AiohttpFactory
+        self._factory = factory or AiohttpFactory()
         if self._pool is None:
             self._connected = False
             self._conn = asyncio.async(self._connect(), loop=self._loop)
@@ -90,7 +90,7 @@ class GremlinClient:
         """
         """
         loop = kwargs.get("loop", "") or self._loop
-        connection = yield from self._factory.connect(self.uri, loop=loop)
+        connection = yield from self._factory.ws_connect(self.uri, loop=loop)
         self._connected = True
         return connection
 
