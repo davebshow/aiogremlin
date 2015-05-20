@@ -12,6 +12,8 @@ except ImportError:
 from aiogremlin.exceptions import RequestError, GremlinServerError
 from aiogremlin.log import logger
 
+__all__ = ("GremlinWriter",)
+
 
 Message = collections.namedtuple("Message", ["status_code", "data", "message",
     "metadata"])
@@ -53,8 +55,12 @@ class GremlinWriter:
     def write(self, gremlin, bindings=None, lang="gremlin-groovy", op="eval",
               processor="", session=None, binary=True,
               mime_type="application/json"):
-        message = self._prepare_message(gremlin, bindings=bindings,
-            lang=lang, op=op, processor=processor, session=session)
+        message = self._prepare_message(gremlin,
+            bindings=bindings,
+            lang=lang,
+            op=op,
+            processor=processor,
+            session=session)
         message = json.dumps(message)
         if binary:
             message = self._set_message_header(message, mime_type)
@@ -71,8 +77,8 @@ class GremlinWriter:
         return b"".join([mime_len, mime_type, bytes(message, "utf-8")])
 
     @staticmethod
-    def _prepare_message(gremlin, bindings=None, lang="gremlin-groovy", op="eval",
-                        processor="", session=None):
+    def _prepare_message(gremlin, bindings=None, lang="gremlin-groovy",
+                         op="eval", processor="", session=None):
         message = {
             "requestId": str(uuid.uuid4()),
             "op": op,

@@ -2,6 +2,9 @@
 Gremlin Server exceptions.
 """
 
+__all__ = ("RequestError", "GremlinServerError", "SocketClientError")
+
+
 class SocketClientError(IOError): pass
 
 

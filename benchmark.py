@@ -89,10 +89,6 @@ ARGS.add_argument(
     '-w', '--warmups', action="store",
     nargs='?', type=int, default=5,
     help='num warmups (default: `%(default)s`)')
-ARGS.add_argument(
-    '-s', '--session', action="store",
-    nargs='?', type=str, default="false",
-    help='use session to establish connections (default: `%(default)s`)')
 
 
 if __name__ == "__main__":
@@ -102,20 +98,16 @@ if __name__ == "__main__":
     concurr = args.concurrency
     poolsize = args.poolsize
     num_warmups = args.warmups
-    session = args.session
     loop = asyncio.get_event_loop()
     t1 = loop.time()
-    if session == "true":
-        factory = aiogremlin.WebSocketSession()
-    else:
-        factory = aiogremlin.AiohttpFactory()
+    factory = aiogremlin.GremlinFactory()
     client = loop.run_until_complete(
         aiogremlin.create_client(loop=loop, factory=factory, poolsize=poolsize))
     t2 = loop.time()
     print("time to establish conns: {}".format(t2 - t1))
     try:
-        print("Runs: {}. Warmups: {}. Messages: {}. Concurrency: {}. Poolsize: {}. Use Session: {}".format(
-            num_tests, num_warmups, num_mssg, concurr, poolsize, session))
+        print("Runs: {}. Warmups: {}. Messages: {}. Concurrency: {}. Poolsize: {}.".format(
+            num_tests, num_warmups, num_mssg, concurr, poolsize))
         main = main(client, num_tests, num_mssg, concurr, num_warmups, loop)
         loop.run_until_complete(main)
     finally:

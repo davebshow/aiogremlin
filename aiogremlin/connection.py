@@ -15,16 +15,33 @@ from aiohttp.websocket import (MSG_BINARY, MSG_TEXT, MSG_CLOSE, MSG_PING,
 from aiohttp.websocket_client import (MsgType, closedMessage,
     ClientWebSocketResponse)
 
-from aiogremlin.abc import AbstractFactory, AbstractConnection
 from aiogremlin.exceptions import SocketClientError
 from aiogremlin.log import INFO, logger
 
+__all__ = ('WebSocketSession', 'GremlinFactory',
+           'GremlinClientWebSocketResponse')
 
-class WebSocketSession(AbstractFactory, ClientSession):
+
+# Basically cut and paste from aiohttp until merge/release of #374
+class WebSocketSession(ClientSession):
+
+    def __init__(self, *, connector=None, loop=None,
+                 cookies=None, headers=None, auth=None,
+                 ws_response_class=None):
+
+        super().__init__(connector=connector, loop=loop,
+                         cookies=cookies, headers=headers, auth=auth)
+
+        self._ws_response_class = ws_response_class
+
 
     @asyncio.coroutine
-    def ws_connect(self, url, protocols=(), timeout=10.0, connector=None,
-                   response_class=None, autoclose=True, autoping=True,
+    def ws_connect(self, url, *,
+                   protocols=(),
+                   timeout=10.0,
+                   autoclose=True,
+                   autoping=True,
+                   ws_response_class=None,
                    loop=None):
         """Initiate websocket connection."""
 
@@ -41,7 +58,7 @@ class WebSocketSession(AbstractFactory, ClientSession):
 
         # send request
         resp = yield from self.request('get', url, headers=headers,
-            read_until_eof=False)
+                                       read_until_eof=False)
 
         # check handshake
         if resp.status != 101:
@@ -73,10 +90,11 @@ class WebSocketSession(AbstractFactory, ClientSession):
         reader = resp.connection.reader.set_parser(WebSocketParser)
         writer = WebSocketWriter(resp.connection.writer, use_mask=True)
 
-        if response_class is None:
-            response_class = ClientWebSocketResponse
+        if ws_response_class is None:
+            ws_response_class = (self._ws_response_class or
+                                 ClientWebSocketResponse)
 
-        return response_class(
+        return ws_response_class(
             reader, writer, protocol, resp, timeout, autoclose, autoping, loop)
 
     def detach(self):
@@ -86,8 +104,9 @@ class WebSocketSession(AbstractFactory, ClientSession):
         self._connector = None
 
 
-def ws_connect(url, protocols=(), timeout=10.0, connector=None,
-               response_class=None, autoclose=True, autoping=True,
+# Cut and paste from aiohttp until merge/release of #374
+def ws_connect(url, *, protocols=(), timeout=10.0, connector=None,
+               ws_response_class=None, autoclose=True, autoping=True,
                loop=None):
     if loop is None:
         asyncio.get_event_loop()
@@ -95,13 +114,11 @@ def ws_connect(url, protocols=(), timeout=10.0, connector=None,
         connector = TCPConnector(loop=loop, force_close=True)
 
     ws_session = WebSocketSession(loop=loop, connector=connector)
-
     try:
         resp = yield from ws_session.ws_connect(url,
                                                 protocols=protocols,
                                                 timeout=timeout,
-                                                connector=connector,
-                                                response_class=response_class,
+                                                ws_response_class=ws_response_class,
                                                 autoclose=autoclose,
                                                 autoping=autoping,
                                                 loop=loop)
@@ -111,51 +128,39 @@ def ws_connect(url, protocols=(), timeout=10.0, connector=None,
         ws_session.detach()
 
 
- # Will drop 'pluggable sockets' implementation in favour of aiohttp default.
-class BaseFactory(AbstractFactory):
+class GremlinFactory:
 
-    @property
-    def factory(self):
-        return self
-
-
-class AiohttpFactory(BaseFactory):
+    def __init__(self, connector=None):
+        self._connector = connector
 
     @asyncio.coroutine
-    def ws_connect(cls, uri='ws://localhost:8182/', protocols=(),
+    def ws_connect(self, url='ws://localhost:8182/', protocols=(),
                    connector=None, autoclose=False, autoping=True,
-                   response_class=None, loop=None):
-        if response_class is None:
-            response_class = GremlinClientWebSocketResponse
-
+                   ws_response_class=None, loop=None):
+        if connector is None:
+            connector = self._connector
+        if ws_response_class is None:
+            ws_response_class = GremlinClientWebSocketResponse
         try:
             return (yield from ws_connect(
-                uri, protocols=protocols, connector=connector,
-                response_class=response_class, autoclose=True, autoping=True,
+                url, protocols=protocols, connector=connector,
+                ws_response_class=ws_response_class, autoclose=True, autoping=True,
                 loop=loop))
         except WSServerHandshakeError as e:
             raise SocketClientError(e.message)
 
 
-class BaseConnection(AbstractConnection):
+class GremlinClientWebSocketResponse(ClientWebSocketResponse):
 
-    def __init__(self, loop=None):
-        self._loop = loop or asyncio.get_event_loop()
-        self._parser = StreamParser(
-            buf=DataQueue(loop=self._loop), loop=self._loop)
+    def __init__(self, reader, writer, protocol, response, timeout, autoclose,
+                 autoping, loop):
+        ClientWebSocketResponse.__init__(self, reader, writer, protocol,
+            response, timeout, autoclose, autoping, loop)
+        self._parser = StreamParser(buf=DataQueue(loop=loop), loop=loop)
 
     @property
     def parser(self):
         return self._parser
-
-
-class GremlinClientWebSocketResponse(BaseConnection, ClientWebSocketResponse):
-
-    def __init__(self, reader, writer, protocol, response, timeout, autoclose,
-                 autoping, loop):
-        BaseConnection.__init__(self, loop=loop)
-        ClientWebSocketResponse.__init__(self, reader, writer, protocol,
-            response, timeout, autoclose, autoping, loop)
 
     @property
     def closed(self):

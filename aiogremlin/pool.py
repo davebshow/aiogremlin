@@ -1,24 +1,22 @@
 import asyncio
 
-from aiogremlin.connection import (AiohttpFactory,
+from aiogremlin.connection import (GremlinFactory,
     GremlinClientWebSocketResponse)
 from aiogremlin.contextmanager import ConnectionContextManager
 from aiogremlin.log import logger
 
-
-def create_pool():
-    pass
+__all__ = ("WebSocketPool",)
 
 
 class WebSocketPool:
 
-    def __init__(self, url='ws://localhost:8182/', factory=None, poolsize=10,
+    def __init__(self, url, *, factory=None, poolsize=10, connector=None,
                  max_retries=10, timeout=None, loop=None, verbose=False,
-                 response_class=None):
+                 ws_response_class=None):
         """
         """
         self.url = url
-        self._factory = factory or AiohttpFactory
+        self._factory = factory or GremlinFactory(connector=connector)
         self.poolsize = poolsize
         self.max_retries = max_retries
         self.timeout = timeout
@@ -27,7 +25,8 @@ class WebSocketPool:
         self._pool = asyncio.Queue(maxsize=self.poolsize, loop=self._loop)
         self.active_conns = set()
         self.num_connecting = 0
-        self._response_class = response_class or GremlinClientWebSocketResponse
+        self._response_class = (ws_response_class or
+                                GremlinClientWebSocketResponse)
         self._closed = False
         if verbose:
             logger.setLevel(INFO)
@@ -37,8 +36,11 @@ class WebSocketPool:
         tasks = []
         poolsize = self.poolsize
         for i in range(poolsize):
-            task = asyncio.async(self.factory.ws_connect(self.url,
-                response_class=self._response_class, loop=self._loop), loop=self._loop)
+            coro = self.factory.ws_connect(
+                self.url,
+                ws_response_class=self._response_class,
+                loop=self._loop)
+            task = asyncio.async(coro, loop=self._loop)
             tasks.append(task)
         for f in asyncio.as_completed(tasks, loop=self._loop):
             conn = yield from f
@@ -78,18 +80,14 @@ class WebSocketPool:
     @asyncio.coroutine
     def _close_active_conns(self):
         tasks = [asyncio.async(conn.close(), loop=self.loop) for conn
-            in self.active_conns]
+                 in self.active_conns]
         yield from asyncio.wait(tasks, loop=self.loop)
 
     @asyncio.coroutine
     def _purge_pool(self):
-        while True:
-            try:
-                conn = self._pool.get_nowait()
-            except asyncio.QueueEmpty:
-                break
-            else:
-                yield from conn.close()
+        while not self._pool.empty():
+            conn = self._pool.get_nowait()
+            yield from conn.close()
 
     @asyncio.coroutine
     def acquire(self, url=None, loop=None, num_retries=None):
@@ -105,18 +103,20 @@ class WebSocketPool:
         elif self.num_active_conns + self.num_connecting >= self.poolsize:
             logger.info("Waiting for socket...")
             socket = yield from asyncio.wait_for(self._pool.get(),
-                self.timeout, loop=loop)
+                                                 self.timeout, loop=loop)
             logger.info("Socket acquired: {} at {}".format(socket, url))
         else:
             self.num_connecting += 1
             try:
-                socket = yield from self.factory.ws_connect(url,
-                    response_class=self._response_class, loop=loop)
+                socket = yield from self.factory.ws_connect(
+                    url,
+                    ws_response_class=self._response_class,
+                    loop=loop)
             finally:
                 self.num_connecting -= 1
         if not socket.closed:
             logger.info("New connection on socket: {} at {}".format(
-                socket, url))
+                        socket, url))
             self.active_conns.add(socket)
         # Untested.
         elif num_retries > 0:
@@ -144,4 +144,4 @@ class WebSocketPool:
 
     def __iter__(self):
         conn = yield from self.acquire()
-        return ConnectionContextManager(conn, self)
+        return ConnectionContextManager(conn)

@@ -6,7 +6,7 @@ import itertools
 import unittest
 import uuid
 from aiogremlin import (GremlinClient, RequestError, GremlinServerError,
-    SocketClientError, WebSocketPool, AiohttpFactory, create_client,
+    SocketClientError, WebSocketPool, GremlinFactory, create_client,
     GremlinWriter, GremlinResponse, WebSocketSession)
 
 
@@ -32,8 +32,11 @@ class GremlinClientTests(unittest.TestCase):
         self.loop.run_until_complete(conn.close())
 
     def test_sub(self):
-        execute = self.gc.execute("x + x", bindings={"x": 4})
-        results = self.loop.run_until_complete(execute)
+        @asyncio.coroutine
+        def go():
+            resp = yield from self.gc.execute("x + x", bindings={"x": 4})
+            return resp
+        results = self.loop.run_until_complete(go())
         self.assertEqual(results[0].data[0], 8)
 
 
@@ -42,8 +45,8 @@ class GremlinClientPoolTests(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        self.gc = GremlinClient("ws://localhost:8182/",
-            factory=AiohttpFactory(), pool=WebSocketPool("ws://localhost:8182/",
+        self.gc = GremlinClient(url="ws://localhost:8182/",
+            factory=GremlinFactory(), pool=WebSocketPool("ws://localhost:8182/",
                                                        loop=self.loop),
             loop=self.loop)
 
@@ -131,8 +134,11 @@ class WebSocketPoolTests(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        self.pool = WebSocketPool(poolsize=2, timeout=1, loop=self.loop,
-            factory=AiohttpFactory())
+        self.pool = WebSocketPool("ws://localhost:8182/",
+            poolsize=2,
+            timeout=1,
+            loop=self.loop,
+            factory=GremlinFactory())
 
     def tearDown(self):
         self.loop.run_until_complete(self.pool.close())
@@ -225,12 +231,27 @@ class ContextMngrTest(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        self.pool = WebSocketPool(poolsize=1, loop=self.loop,
-            factory=AiohttpFactory, max_retries=0)
+        self.pool = WebSocketPool("ws://localhost:8182/",
+            poolsize=1,
+            loop=self.loop,
+            factory=GremlinFactory(),
+            max_retries=0)
 
     def tearDown(self):
         self.loop.run_until_complete(self.pool.close())
         self.loop.close()
+
+    @asyncio.coroutine
+    def _check_closed(self):
+        conn = self.pool._pool.get_nowait()
+        self.assertTrue(conn.closed)
+        writer = GremlinWriter(conn)
+        try:
+            conn = yield from writer.write("1 + 1")
+            error = False
+        except RuntimeError:
+            error = True
+        self.assertTrue(error)
 
     def test_connection_manager(self):
         results = []
@@ -239,22 +260,52 @@ class ContextMngrTest(unittest.TestCase):
             with (yield from self.pool) as conn:
                 writer = GremlinWriter(conn)
                 conn = writer.write("1 + 1")
-                resp = GremlinResponse(conn, self.pool, loop=self.loop)
+                resp = GremlinResponse(conn, pool=self.pool, loop=self.loop)
                 while True:
                     mssg = yield from resp.stream.read()
                     if mssg is None:
                         break
                     results.append(mssg)
-            conn = self.pool._pool.get_nowait()
-            self.assertTrue(conn.closed)
-            writer = GremlinWriter(conn)
-            try:
-                conn = yield from writer.write("1 + 1")
-                error = False
-            except RuntimeError:
-                error = True
-            self.assertTrue(error)
+            # Test that connection was closed
+            yield from self._check_closed()
         self.loop.run_until_complete(go())
+
+    def test_connection_manager_with_client(self):
+        @asyncio.coroutine
+        def go():
+            with (yield from self.pool) as conn:
+                gc = GremlinClient(connection=conn, loop=self.loop)
+                resp = yield from gc.execute("1 + 1")
+                self.assertEqual(resp[0].data[0], 2)
+                self.pool.release(conn)
+            # Test that connection was closed
+            yield from self._check_closed()
+        self.loop.run_until_complete(go())
+
+    def test_connection_manager_error(self):
+        results = []
+        @asyncio.coroutine
+        def go():
+            with (yield from self.pool) as conn:
+                writer = GremlinWriter(conn)
+                conn = writer.write("1 + 1 sdalfj;sd")
+                resp = GremlinResponse(conn, pool=self.pool, loop=self.loop)
+                try:
+                    while True:
+                        mssg = yield from resp.stream.read()
+                        if mssg is None:
+                            break
+                        results.append(mssg)
+                except:
+                    self.pool.release(conn)
+                    raise
+        try:
+            self.loop.run_until_complete(go())
+            err = False
+        except:
+            err = True
+        self.assertTrue(err)
+        self.loop.run_until_complete(self._check_closed())
 
 
 class GremlinClientPoolSessionTests(unittest.TestCase):
@@ -264,7 +315,7 @@ class GremlinClientPoolSessionTests(unittest.TestCase):
         asyncio.set_event_loop(None)
         self.gc = GremlinClient("ws://localhost:8182/",
             pool=WebSocketPool("ws://localhost:8182/", loop=self.loop,
-                              factory=WebSocketSession(loop=self.loop)),
+                               factory=WebSocketSession(loop=self.loop)),
             loop=self.loop)
 
     def tearDown(self):

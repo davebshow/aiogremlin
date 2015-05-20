@@ -1,10 +1,9 @@
 class ConnectionContextManager:
 
-    __slots__ = ("_conn", "_pool")
+    __slots__ = ("_conn")
 
-    def __init__(self, conn, pool):
+    def __init__(self, conn):
         self._conn = conn
-        self._pool = pool
 
     def __enter__(self):
         return self._conn
@@ -15,4 +14,3 @@ class ConnectionContextManager:
             self._conn._close()
         finally:
             self._conn = None
-            self._pool = None
