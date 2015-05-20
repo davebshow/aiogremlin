@@ -5,3 +5,5 @@
 0.0.5 - 5/13/2015: Using EofStream terminator technique to prepare for 3.0.0.M9
 0.0.7 - 5/20/2015: Full integration with aiohttp. Added Session object for HTTP
                    connection pooling. Added a context manager.
+0.0.8 - 5/20/2015: Fixed bug in client constructor logic. Tested different client
+                   connection handling techniques.

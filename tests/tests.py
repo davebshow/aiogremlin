@@ -275,11 +275,29 @@ class ContextMngrTest(unittest.TestCase):
         def go():
             with (yield from self.pool) as conn:
                 gc = GremlinClient(connection=conn, loop=self.loop)
-                resp = yield from gc.execute("1 + 1")
-                self.assertEqual(resp[0].data[0], 2)
+                resp = yield from gc.submit("1 + 1")
+                self.assertEqual(conn, resp.stream._conn)
+                result = yield from resp.get()
+                self.assertEqual(result[0].data[0], 2)
+
                 self.pool.release(conn)
             # Test that connection was closed
             yield from self._check_closed()
+        self.loop.run_until_complete(go())
+
+    def test_connection_manager_with_client_closed_conn(self):
+        @asyncio.coroutine
+        def go():
+            with (yield from self.pool) as conn:
+                conn._closing = True
+                conn._close()
+                gc = GremlinClient(connection=conn, loop=self.loop)
+                resp = yield from gc.submit("1 + 1")
+                self.assertNotEqual(conn, resp.stream._conn)
+                result = yield from resp.get()
+                self.assertEqual(result[0].data[0], 2)
+                yield from resp.stream._conn.close()
+            # Test that connection was closed
         self.loop.run_until_complete(go())
 
     def test_connection_manager_error(self):

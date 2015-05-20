@@ -71,15 +71,13 @@ class GremlinClient:
         self._connector = connector
         self._factory = factory or GremlinFactory(connector=self._connector)
         self._conn = connection
-        if self._pool is None and self._conn is None:
-            self._connected = False
-            self._conn = asyncio.async(self._connect(), loop=self._loop)
-        elif pool is not None:
+        if pool is not None:
             self._connected = self._pool._connected
-        elif self._conn is not None and not connection._closed:
+        elif self._conn and not getattr(connection, "closed", True):
             self._connected = True
         else:
             self._connected = False
+            self._conn = asyncio.async(self._connect(), loop=self._loop)
         if verbose:
             logger.setLevel(INFO)
 
