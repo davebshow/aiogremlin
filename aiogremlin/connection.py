@@ -22,136 +22,6 @@ __all__ = ('WebSocketSession', 'GremlinFactory',
            'GremlinClientWebSocketResponse')
 
 
-# Basically cut and paste from aiohttp until merge/release of #374
-class WebSocketSession(ClientSession):
-
-    def __init__(self, *, connector=None, loop=None,
-                 cookies=None, headers=None, auth=None,
-                 ws_response_class=None):
-
-        super().__init__(connector=connector, loop=loop,
-                         cookies=cookies, headers=headers, auth=auth)
-
-        self._ws_response_class = ws_response_class
-
-    @asyncio.coroutine
-    def ws_connect(self, url, *,
-                   protocols=(),
-                   timeout=10.0,
-                   autoclose=True,
-                   autoping=True,
-                   ws_response_class=None,
-                   loop=None):
-        """Initiate websocket connection."""
-
-        sec_key = base64.b64encode(os.urandom(16))
-
-        headers = {
-            hdrs.UPGRADE: hdrs.WEBSOCKET,
-            hdrs.CONNECTION: hdrs.UPGRADE,
-            hdrs.SEC_WEBSOCKET_VERSION: '13',
-            hdrs.SEC_WEBSOCKET_KEY: sec_key.decode(),
-        }
-        if protocols:
-            headers[hdrs.SEC_WEBSOCKET_PROTOCOL] = ','.join(protocols)
-
-        # send request
-        resp = yield from self.request('get', url, headers=headers,
-                                       read_until_eof=False)
-
-        # check handshake
-        if resp.status != 101:
-            raise WSServerHandshakeError('Invalid response status')
-
-        if resp.headers.get(hdrs.UPGRADE, '').lower() != 'websocket':
-            raise WSServerHandshakeError('Invalid upgrade header')
-
-        if resp.headers.get(hdrs.CONNECTION, '').lower() != 'upgrade':
-            raise WSServerHandshakeError('Invalid connection header')
-
-        # key calculation
-        key = resp.headers.get(hdrs.SEC_WEBSOCKET_ACCEPT, '')
-        match = base64.b64encode(
-            hashlib.sha1(sec_key + WS_KEY).digest()).decode()
-        if key != match:
-            raise WSServerHandshakeError('Invalid challenge response')
-
-        # websocket protocol
-        protocol = None
-        if protocols and hdrs.SEC_WEBSOCKET_PROTOCOL in resp.headers:
-            resp_protocols = [
-                proto.strip() for proto in
-                resp.headers[hdrs.SEC_WEBSOCKET_PROTOCOL].split(',')]
-
-            for proto in resp_protocols:
-                if proto in protocols:
-                    protocol = proto
-                    break
-
-        reader = resp.connection.reader.set_parser(WebSocketParser)
-        writer = WebSocketWriter(resp.connection.writer, use_mask=True)
-
-        if ws_response_class is None:
-            ws_response_class = (self._ws_response_class or
-                                 ClientWebSocketResponse)
-
-        return ws_response_class(
-            reader, writer, protocol, resp, timeout, autoclose, autoping, loop)
-
-    def detach(self):
-        """Detach connector from session without closing the former.
-        Session is switched to closed state anyway.
-        """
-        self._connector = None
-
-
-# Cut and paste from aiohttp until merge/release of #374
-def ws_connect(url, *, protocols=(), timeout=10.0, connector=None,
-               ws_response_class=None, autoclose=True, autoping=True,
-               loop=None):
-    if loop is None:
-        asyncio.get_event_loop()
-    if connector is None:
-        connector = TCPConnector(loop=loop, force_close=True)
-
-    ws_session = WebSocketSession(loop=loop, connector=connector)
-    try:
-        resp = yield from ws_session.ws_connect(
-            url,
-            protocols=protocols,
-            timeout=timeout,
-            ws_response_class=ws_response_class,
-            autoclose=autoclose,
-            autoping=autoping,
-            loop=loop)
-        return resp
-
-    finally:
-        ws_session.detach()
-
-
-class GremlinFactory:
-
-    def __init__(self, connector=None):
-        self._connector = connector
-
-    @asyncio.coroutine
-    def ws_connect(self, url='ws://localhost:8182/', protocols=(),
-                   connector=None, autoclose=False, autoping=True,
-                   ws_response_class=None, loop=None):
-        if connector is None:
-            connector = self._connector
-        if ws_response_class is None:
-            ws_response_class = GremlinClientWebSocketResponse
-        try:
-            return (yield from ws_connect(
-                url, protocols=protocols, connector=connector,
-                ws_response_class=ws_response_class, autoclose=True,
-                autoping=True, loop=loop))
-        except WSServerHandshakeError as e:
-            raise SocketClientError(e.message)
-
-
 class GremlinClientWebSocketResponse(ClientWebSocketResponse):
 
     def __init__(self, reader, writer, protocol, response, timeout, autoclose,
@@ -243,3 +113,128 @@ class GremlinClientWebSocketResponse(ClientWebSocketResponse):
                 raise msg[1]
             elif msg.tp == MsgType.closed:
                 pass
+
+
+# Basically cut and paste from aiohttp until merge/release of #374
+class WebSocketSession(ClientSession):
+
+    def __init__(self, *, connector=None, loop=None,
+                 cookies=None, headers=None, auth=None,
+                 ws_response_class=GremlinClientWebSocketResponse):
+
+        super().__init__(connector=connector, loop=loop,
+                         cookies=cookies, headers=headers, auth=auth)
+
+        self._ws_response_class = ws_response_class
+
+    @asyncio.coroutine
+    def ws_connect(self, url, *,
+                   protocols=(),
+                   timeout=10.0,
+                   autoclose=True,
+                   autoping=True,
+                   loop=None):
+        """Initiate websocket connection."""
+
+        sec_key = base64.b64encode(os.urandom(16))
+
+        headers = {
+            hdrs.UPGRADE: hdrs.WEBSOCKET,
+            hdrs.CONNECTION: hdrs.UPGRADE,
+            hdrs.SEC_WEBSOCKET_VERSION: '13',
+            hdrs.SEC_WEBSOCKET_KEY: sec_key.decode(),
+        }
+        if protocols:
+            headers[hdrs.SEC_WEBSOCKET_PROTOCOL] = ','.join(protocols)
+
+        # send request
+        resp = yield from self.request('get', url, headers=headers,
+                                       read_until_eof=False)
+
+        # check handshake
+        if resp.status != 101:
+            raise WSServerHandshakeError('Invalid response status')
+
+        if resp.headers.get(hdrs.UPGRADE, '').lower() != 'websocket':
+            raise WSServerHandshakeError('Invalid upgrade header')
+
+        if resp.headers.get(hdrs.CONNECTION, '').lower() != 'upgrade':
+            raise WSServerHandshakeError('Invalid connection header')
+
+        # key calculation
+        key = resp.headers.get(hdrs.SEC_WEBSOCKET_ACCEPT, '')
+        match = base64.b64encode(
+            hashlib.sha1(sec_key + WS_KEY).digest()).decode()
+        if key != match:
+            raise WSServerHandshakeError('Invalid challenge response')
+
+        # websocket protocol
+        protocol = None
+        if protocols and hdrs.SEC_WEBSOCKET_PROTOCOL in resp.headers:
+            resp_protocols = [
+                proto.strip() for proto in
+                resp.headers[hdrs.SEC_WEBSOCKET_PROTOCOL].split(',')]
+
+            for proto in resp_protocols:
+                if proto in protocols:
+                    protocol = proto
+                    break
+
+        reader = resp.connection.reader.set_parser(WebSocketParser)
+        writer = WebSocketWriter(resp.connection.writer, use_mask=True)
+
+        return self._ws_response_class(
+            reader, writer, protocol, resp, timeout, autoclose, autoping, loop)
+
+    def detach(self):
+        """Detach connector from session without closing the former.
+        Session is switched to closed state anyway.
+        """
+        self._connector = None
+
+
+# Cut and paste from aiohttp until merge/release of #374
+def ws_connect(url, *, protocols=(), timeout=10.0, connector=None,
+               ws_response_class=None, autoclose=True, autoping=True,
+               loop=None):
+    if loop is None:
+        asyncio.get_event_loop()
+    if connector is None:
+        connector = TCPConnector(loop=loop, force_close=True)
+    if ws_response_class is None:
+        ws_response_class = GremlinClientWebSocketResponse
+
+    ws_session = WebSocketSession(loop=loop, connector=connector,
+                                  ws_response_class=ws_response_class)
+    try:
+        resp = yield from ws_session.ws_connect(
+            url,
+            protocols=protocols,
+            timeout=timeout,
+            autoclose=autoclose,
+            autoping=autoping,
+            loop=loop)
+        return resp
+
+    finally:
+        ws_session.detach()
+
+
+class GremlinFactory:
+
+    def __init__(self, connector=None, ws_response_class=None):
+        self._connector = connector
+        if ws_response_class is None:
+            ws_response_class = GremlinClientWebSocketResponse
+        self._ws_response_class = ws_response_class
+
+    @asyncio.coroutine
+    def ws_connect(self, url='ws://localhost:8182/', protocols=(),
+                   autoclose=False, autoping=True, loop=None):
+        try:
+            return (yield from ws_connect(
+                url, protocols=protocols, connector=self._connector,
+                ws_response_class=self._ws_response_class, autoclose=True,
+                autoping=True, loop=loop))
+        except WSServerHandshakeError as e:
+            raise SocketClientError(e.message)

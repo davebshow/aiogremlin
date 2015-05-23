@@ -16,7 +16,11 @@ class WebSocketPool:
         """
         """
         self.url = url
-        self._factory = factory or GremlinFactory(connector=connector)
+        self._ws_response_class = (ws_response_class or
+                                   GremlinClientWebSocketResponse)
+        self._factory = factory or GremlinFactory(
+            connector=connector,
+            ws_response_class=self._ws_response_class)
         self.poolsize = poolsize
         self.max_retries = max_retries
         self.timeout = timeout
@@ -25,8 +29,6 @@ class WebSocketPool:
         self._pool = asyncio.Queue(maxsize=self.poolsize, loop=self._loop)
         self.active_conns = set()
         self.num_connecting = 0
-        self._response_class = (ws_response_class or
-                                GremlinClientWebSocketResponse)
         self._closed = False
         if verbose:
             logger.setLevel(INFO)
@@ -38,7 +40,6 @@ class WebSocketPool:
         for i in range(poolsize):
             coro = self.factory.ws_connect(
                 self.url,
-                ws_response_class=self._response_class,
                 loop=self._loop)
             task = asyncio.async(coro, loop=self._loop)
             tasks.append(task)
@@ -110,7 +111,6 @@ class WebSocketPool:
             try:
                 socket = yield from self.factory.ws_connect(
                     url,
-                    ws_response_class=self._response_class,
                     loop=loop)
             finally:
                 self.num_connecting -= 1
