@@ -35,16 +35,11 @@ class GremlinClientWebSocketResponse(ClientWebSocketResponse):
     def parser(self):
         return self._parser
 
-    @property
-    def closed(self):
-        """Required by ABC."""
-        return self._closed
-
     @asyncio.coroutine
     def close(self, *, code=1000, message=b''):
         if not self._closed:
-            do_close = self._close()
-            if do_close:
+            did_close = self._close()
+            if did_close:
                 return True
             while True:
                 try:
