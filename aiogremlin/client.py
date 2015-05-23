@@ -23,7 +23,8 @@ def create_client(*, url='ws://localhost:8182/', loop=None,
                   timeout=None, verbose=False, fill_pool=True, connector=None):
 
     if factory is None:
-        factory = WebSocketSession(connector=connector,
+        factory = WebSocketSession(
+            connector=connector,
             ws_response_class=GremlinClientWebSocketResponse,
             loop=loop)
 
@@ -141,7 +142,7 @@ class GremlinClient:
 
     @asyncio.coroutine
     def execute(self, gremlin, *, bindings=None, lang=None,
-               op=None, processor=None, consumer=None, collect=True, **kwargs):
+                op=None, processor=None, consumer=None, collect=True):
         """
         """
         lang = lang or self.lang

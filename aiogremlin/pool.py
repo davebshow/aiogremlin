@@ -1,7 +1,7 @@
 import asyncio
 
 from aiogremlin.connection import (GremlinFactory,
-    GremlinClientWebSocketResponse)
+                                   GremlinClientWebSocketResponse)
 from aiogremlin.contextmanager import ConnectionContextManager
 from aiogremlin.log import logger
 

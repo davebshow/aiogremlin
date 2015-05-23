@@ -6,8 +6,9 @@ import itertools
 import unittest
 import uuid
 from aiogremlin import (GremlinClient, RequestError, GremlinServerError,
-    SocketClientError, WebSocketPool, GremlinFactory, create_client,
-    GremlinWriter, GremlinResponse, WebSocketSession)
+                        SocketClientError, WebSocketPool, GremlinFactory,
+                        create_client, GremlinWriter, GremlinResponse,
+                        WebSocketSession)
 
 
 class GremlinClientTests(unittest.TestCase):
@@ -45,10 +46,11 @@ class GremlinClientPoolTests(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
+        pool = WebSocketPool("ws://localhost:8182/", loop=self.loop)
         self.gc = GremlinClient(url="ws://localhost:8182/",
-            factory=GremlinFactory(), pool=WebSocketPool("ws://localhost:8182/",
-                                                       loop=self.loop),
-            loop=self.loop)
+                                factory=GremlinFactory(),
+                                pool=pool,
+                                loop=self.loop)
 
     def tearDown(self):
         self.loop.run_until_complete(self.gc.close())
@@ -74,8 +76,9 @@ class GremlinClientPoolTests(unittest.TestCase):
         sub2 = self.gc.execute("x + x", bindings={"x": 2})
         sub3 = self.gc.execute("x + x", bindings={"x": 4})
         coro = asyncio.gather(*[asyncio.async(sub1, loop=self.loop),
-                             asyncio.async(sub2, loop=self.loop),
-                             asyncio.async(sub3, loop=self.loop)], loop=self.loop)
+                              asyncio.async(sub2, loop=self.loop),
+                              asyncio.async(sub3, loop=self.loop)],
+                              loop=self.loop)
         # Here I am looking for resource warnings.
         results = self.loop.run_until_complete(coro)
         self.assertIsNotNone(results)
@@ -111,7 +114,8 @@ class GremlinClientPoolTests(unittest.TestCase):
         self.assertTrue(error)
 
     def test_session_gen(self):
-        execute = self.gc.execute("x + x", processor="session", bindings={"x": 4})
+        execute = self.gc.execute("x + x", processor="session",
+                                  bindings={"x": 4})
         results = self.loop.run_until_complete(execute)
         self.assertEqual(results[0].data[0], 8)
 
@@ -120,7 +124,7 @@ class GremlinClientPoolTests(unittest.TestCase):
         def stream_coro():
             session = str(uuid.uuid4())
             resp = yield from self.gc.submit("x + x", bindings={"x": 4},
-                session=session)
+                                             session=session)
             while True:
                 f = yield from resp.stream.read()
                 if f is None:
@@ -135,10 +139,10 @@ class WebSocketPoolTests(unittest.TestCase):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
         self.pool = WebSocketPool("ws://localhost:8182/",
-            poolsize=2,
-            timeout=1,
-            loop=self.loop,
-            factory=GremlinFactory())
+                                  poolsize=2,
+                                  timeout=1,
+                                  loop=self.loop,
+                                  factory=GremlinFactory())
 
     def tearDown(self):
         self.loop.run_until_complete(self.pool.close())
@@ -226,16 +230,17 @@ class WebSocketPoolTests(unittest.TestCase):
 
         self.loop.run_until_complete(conn())
 
+
 class ContextMngrTest(unittest.TestCase):
 
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
         self.pool = WebSocketPool("ws://localhost:8182/",
-            poolsize=1,
-            loop=self.loop,
-            factory=GremlinFactory(),
-            max_retries=0)
+                                  poolsize=1,
+                                  loop=self.loop,
+                                  factory=GremlinFactory(),
+                                  max_retries=0)
 
     def tearDown(self):
         self.loop.run_until_complete(self.pool.close())
@@ -255,6 +260,7 @@ class ContextMngrTest(unittest.TestCase):
 
     def test_connection_manager(self):
         results = []
+
         @asyncio.coroutine
         def go():
             with (yield from self.pool) as conn:
@@ -302,6 +308,7 @@ class ContextMngrTest(unittest.TestCase):
 
     def test_connection_manager_error(self):
         results = []
+
         @asyncio.coroutine
         def go():
             with (yield from self.pool) as conn:
@@ -331,10 +338,12 @@ class GremlinClientPoolSessionTests(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
+        pool = WebSocketPool("ws://localhost:8182/",
+                             loop=self.loop,
+                             factory=WebSocketSession(loop=self.loop))
         self.gc = GremlinClient("ws://localhost:8182/",
-            pool=WebSocketPool("ws://localhost:8182/", loop=self.loop,
-                               factory=WebSocketSession(loop=self.loop)),
-            loop=self.loop)
+                                pool=pool,
+                                loop=self.loop)
 
     def tearDown(self):
         self.loop.run_until_complete(self.gc.close())
@@ -360,8 +369,9 @@ class GremlinClientPoolSessionTests(unittest.TestCase):
         sub2 = self.gc.execute("x + x", bindings={"x": 2})
         sub3 = self.gc.execute("x + x", bindings={"x": 4})
         coro = asyncio.gather(*[asyncio.async(sub1, loop=self.loop),
-                             asyncio.async(sub2, loop=self.loop),
-                             asyncio.async(sub3, loop=self.loop)], loop=self.loop)
+                              asyncio.async(sub2, loop=self.loop),
+                              asyncio.async(sub3, loop=self.loop)],
+                              loop=self.loop)
         # Here I am looking for resource warnings.
         results = self.loop.run_until_complete(coro)
         self.assertIsNotNone(results)

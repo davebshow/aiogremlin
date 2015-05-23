@@ -6,14 +6,14 @@ import hashlib
 import os
 
 from aiohttp import (client, hdrs, DataQueue, StreamParser,
-    WSServerHandshakeError, ClientSession, TCPConnector)
+                     WSServerHandshakeError, ClientSession, TCPConnector)
 from aiohttp.errors import WSServerHandshakeError
 from aiohttp.websocket import WS_KEY, Message
 from aiohttp.websocket import WebSocketParser, WebSocketWriter, WebSocketError
 from aiohttp.websocket import (MSG_BINARY, MSG_TEXT, MSG_CLOSE, MSG_PING,
-    MSG_PONG)
+                               MSG_PONG)
 from aiohttp.websocket_client import (MsgType, closedMessage,
-    ClientWebSocketResponse)
+                                      ClientWebSocketResponse)
 
 from aiogremlin.exceptions import SocketClientError
 from aiogremlin.log import INFO, logger
@@ -33,7 +33,6 @@ class WebSocketSession(ClientSession):
                          cookies=cookies, headers=headers, auth=auth)
 
         self._ws_response_class = ws_response_class
-
 
     @asyncio.coroutine
     def ws_connect(self, url, *,
@@ -72,15 +71,17 @@ class WebSocketSession(ClientSession):
 
         # key calculation
         key = resp.headers.get(hdrs.SEC_WEBSOCKET_ACCEPT, '')
-        match = base64.b64encode(hashlib.sha1(sec_key + WS_KEY).digest()).decode()
+        match = base64.b64encode(
+            hashlib.sha1(sec_key + WS_KEY).digest()).decode()
         if key != match:
             raise WSServerHandshakeError('Invalid challenge response')
 
         # websocket protocol
         protocol = None
         if protocols and hdrs.SEC_WEBSOCKET_PROTOCOL in resp.headers:
-            resp_protocols = [proto.strip() for proto in
-                              resp.headers[hdrs.SEC_WEBSOCKET_PROTOCOL].split(',')]
+            resp_protocols = [
+                proto.strip() for proto in
+                resp.headers[hdrs.SEC_WEBSOCKET_PROTOCOL].split(',')]
 
             for proto in resp_protocols:
                 if proto in protocols:
@@ -115,13 +116,14 @@ def ws_connect(url, *, protocols=(), timeout=10.0, connector=None,
 
     ws_session = WebSocketSession(loop=loop, connector=connector)
     try:
-        resp = yield from ws_session.ws_connect(url,
-                                                protocols=protocols,
-                                                timeout=timeout,
-                                                ws_response_class=ws_response_class,
-                                                autoclose=autoclose,
-                                                autoping=autoping,
-                                                loop=loop)
+        resp = yield from ws_session.ws_connect(
+            url,
+            protocols=protocols,
+            timeout=timeout,
+            ws_response_class=ws_response_class,
+            autoclose=autoclose,
+            autoping=autoping,
+            loop=loop)
         return resp
 
     finally:
@@ -144,8 +146,8 @@ class GremlinFactory:
         try:
             return (yield from ws_connect(
                 url, protocols=protocols, connector=connector,
-                ws_response_class=ws_response_class, autoclose=True, autoping=True,
-                loop=loop))
+                ws_response_class=ws_response_class, autoclose=True,
+                autoping=True, loop=loop))
         except WSServerHandshakeError as e:
             raise SocketClientError(e.message)
 
@@ -155,7 +157,8 @@ class GremlinClientWebSocketResponse(ClientWebSocketResponse):
     def __init__(self, reader, writer, protocol, response, timeout, autoclose,
                  autoping, loop):
         ClientWebSocketResponse.__init__(self, reader, writer, protocol,
-            response, timeout, autoclose, autoping, loop)
+                                         response, timeout, autoclose,
+                                         autoping, loop)
         self._parser = StreamParser(buf=DataQueue(loop=loop), loop=loop)
 
     @property
@@ -228,47 +231,15 @@ class GremlinClientWebSocketResponse(ClientWebSocketResponse):
 
     @asyncio.coroutine
     def receive(self):
-        if self._waiting:
-            raise RuntimeError('Concurrent call to receive() is not allowed')
-
-        self._waiting = True
-        try:
-            while True:
-                if self._closed:
-                    return closedMessage
-
-                try:
-                    msg = yield from self._reader.read()
-                except (asyncio.CancelledError, asyncio.TimeoutError):
-                    raise
-                except WebSocketError as exc:
-                    self._close_code = exc.code
-                    yield from self.close(code=exc.code)
-                    raise
-                except Exception as exc:
-                    self._exception = exc
-                    self._closing = True
-                    self._close_code = 1006
-                    yield from self.close()
-                    raise
-                if msg.tp == MsgType.close:
-                    self._closing = True
-                    self._close_code = msg.data
-                    if not self._closed and self._autoclose:
-                        yield from self.close()
-                    raise RuntimeError("Socket connection closed by server.")
-                elif not self._closed:
-                    if msg.tp == MsgType.ping and self._autoping:
-                        self._writer.pong(msg.data)
-                    elif msg.tp == MsgType.pong and self._autoping:
-                        continue
-                    else:
-                        if msg.tp == MsgType.binary:
-                            self.parser.feed_data(msg.data.decode())
-                        elif msg.tp == MsgType.text:
-                            self.parser.feed_data(msg.data.strip())
-                        else:
-                            raise RuntimeError("Unknown message type.")
-                        break
-        finally:
-            self._waiting = False
+        msg = yield from super().receive()
+        if msg.tp == MsgType.binary:
+            self.parser.feed_data(msg.data.decode())
+        elif msg.tp == MsgType.text:
+            self.parser.feed_data(msg.data.strip())
+        else:
+            if msg.tp == MsgType.close:
+                yield from ws.close()
+            elif msg.tp == MsgType.error:
+                raise msg[1]
+            elif msg.tp == MsgType.closed:
+                pass

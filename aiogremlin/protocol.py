@@ -15,8 +15,9 @@ from aiogremlin.log import logger
 __all__ = ("GremlinWriter",)
 
 
-Message = collections.namedtuple("Message", ["status_code", "data", "message",
-    "metadata"])
+Message = collections.namedtuple(
+    "Message",
+    ["status_code", "data", "message", "metadata"])
 
 
 def gremlin_response_parser(out, buf):
@@ -55,7 +56,8 @@ class GremlinWriter:
     def write(self, gremlin, bindings=None, lang="gremlin-groovy", op="eval",
               processor="", session=None, binary=True,
               mime_type="application/json"):
-        message = self._prepare_message(gremlin,
+        message = self._prepare_message(
+            gremlin,
             bindings=bindings,
             lang=lang,
             op=op,
@@ -83,7 +85,7 @@ class GremlinWriter:
             "requestId": str(uuid.uuid4()),
             "op": op,
             "processor": processor,
-            "args":{
+            "args": {
                 "gremlin": gremlin,
                 "bindings": bindings,
                 "language":  lang

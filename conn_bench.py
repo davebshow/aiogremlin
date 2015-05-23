@@ -44,12 +44,15 @@ if __name__ == "__main__":
                 )
                 tasks.append(task)
             t1 = loop.time()
-            loop.run_until_complete(asyncio.async(asyncio.gather(*tasks, loop=loop)))
+            loop.run_until_complete(
+                asyncio.async(asyncio.gather(*tasks, loop=loop)))
             t2 = loop.time()
-            print("avg: time to establish conn: {}".format((t2 - t1) / (tests * 100)))
+            print("avg: time to establish conn: {}".format(
+                (t2 - t1) / (tests * 100)))
         m2 = loop.time()
         print("time to establish conns: {}".format((m2 - m1)))
-        print("avg time to establish conns: {}".format((m2 - m1) / (tests * 100 * 50)))
+        print("avg time to establish conns: {}".format(
+            (m2 - m1) / (tests * 100 * 50)))
     finally:
         loop.close()
         print("CLOSED CLIENT AND LOOP")

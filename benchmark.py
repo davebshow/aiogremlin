@@ -45,8 +45,8 @@ def run(client, count, concurrency, loop):
     yield from asyncio.gather(*bombers, loop=loop)
     t2 = loop.time()
     mps = processed_count / (t2 - t1)
-    print("Benchmark complete: {} mps. {} messages in {}".format(mps,
-        processed_count, t2-t1))
+    print("Benchmark complete: {} mps. {} messages in {}".format(
+        mps, processed_count, t2-t1))
     return mps
 
 
@@ -102,11 +102,14 @@ if __name__ == "__main__":
     t1 = loop.time()
     factory = aiogremlin.GremlinFactory()
     client = loop.run_until_complete(
-        aiogremlin.create_client(loop=loop, factory=factory, poolsize=poolsize))
+        aiogremlin.create_client(loop=loop,
+                                 factory=factory,
+                                 poolsize=poolsize))
     t2 = loop.time()
     print("time to establish conns: {}".format(t2 - t1))
     try:
-        print("Runs: {}. Warmups: {}. Messages: {}. Concurrency: {}. Poolsize: {}.".format(
+        print(
+            "Runs: {}. Warmups: {}. Messages: {}. Concurrency: {}. Poolsize: {}.".format(
             num_tests, num_warmups, num_mssg, concurr, poolsize))
         main = main(client, num_tests, num_mssg, concurr, num_warmups, loop)
         loop.run_until_complete(main)
