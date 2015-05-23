@@ -16,11 +16,11 @@ class WebSocketPool:
         """
         """
         self.url = url
-        self._ws_response_class = (ws_response_class or
-                                   GremlinClientWebSocketResponse)
+        if ws_response_class is None:
+            ws_response_class = GremlinClientWebSocketResponse
         self._factory = factory or GremlinFactory(
             connector=connector,
-            ws_response_class=self._ws_response_class)
+            ws_response_class=ws_response_class)
         self.poolsize = poolsize
         self.max_retries = max_retries
         self.timeout = timeout
