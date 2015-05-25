@@ -105,7 +105,7 @@ class GremlinClientWebSocketResponse(ClientWebSocketResponse):
             if msg.tp == MsgType.close:
                 yield from ws.close()
             elif msg.tp == MsgType.error:
-                raise msg[1]
+                raise msg.data
             elif msg.tp == MsgType.closed:
                 pass
 

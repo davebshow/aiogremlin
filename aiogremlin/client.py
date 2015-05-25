@@ -10,7 +10,7 @@ from aiogremlin.connection import (GremlinFactory, WebSocketSession,
 from aiogremlin.exceptions import RequestError
 from aiogremlin.log import logger, INFO
 from aiogremlin.pool import WebSocketPool
-from aiogremlin.protocol import gremlin_response_parser, GremlinWriter
+from aiogremlin.subprotocol import gremlin_response_parser, GremlinWriter
 
 __all__ = ("create_client", "GremlinClient", "GremlinResponse",
            "GremlinResponseStream")
@@ -203,6 +203,7 @@ class GremlinResponseStream:
         #     self._pool.release(self._conn)
         #     message = None
         # else:
+            # asyncio.async(self._conn.receive())
         # This will be different 3.0.0.M9
         try:
             yield from self._conn.receive()

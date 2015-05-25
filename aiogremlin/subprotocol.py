@@ -1,4 +1,4 @@
-"""Implements a very simple "protocol" for the Gremlin server."""
+"""Implements the Gremlin Server subprotocol."""
 
 import asyncio
 import collections
