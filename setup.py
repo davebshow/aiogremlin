@@ -12,7 +12,7 @@ setup(
     long_description=open("README.txt").read(),
     packages=["aiogremlin", "tests"],
     install_requires=[
-        "aiohttp==0.15.3"
+        "aiohttp==0.16.0"
     ],
     test_suite="tests",
     classifiers=[

@@ -18,14 +18,13 @@ class WebSocketPool:
         self.url = url
         if ws_response_class is None:
             ws_response_class = GremlinClientWebSocketResponse
-        self._factory = factory or GremlinFactory(
-            connector=connector,
-            ws_response_class=ws_response_class)
         self.poolsize = poolsize
         self.max_retries = max_retries
         self.timeout = timeout
         self._connected = False
         self._loop = loop or asyncio.get_event_loop()
+        self._factory = factory or GremlinFactory(connector=connector,
+                                                  loop=self._loop)
         self._pool = asyncio.Queue(maxsize=self.poolsize, loop=self._loop)
         self.active_conns = set()
         self.num_connecting = 0
@@ -38,9 +37,7 @@ class WebSocketPool:
         tasks = []
         poolsize = self.poolsize
         for i in range(poolsize):
-            coro = self.factory.ws_connect(
-                self.url,
-                loop=self._loop)
+            coro = self.factory.ws_connect(self.url)
             task = asyncio.async(coro, loop=self._loop)
             tasks.append(task)
         for f in asyncio.as_completed(tasks, loop=self._loop):
@@ -72,6 +69,10 @@ class WebSocketPool:
 
     @asyncio.coroutine
     def close(self):
+        try:
+            self._factory.close()
+        except AttributeError:
+            pass
         if not self._closed:
             if self.active_conns:
                 yield from self._close_active_conns()
@@ -109,9 +110,7 @@ class WebSocketPool:
         else:
             self.num_connecting += 1
             try:
-                socket = yield from self.factory.ws_connect(
-                    url,
-                    loop=loop)
+                socket = yield from self.factory.ws_connect(url)
             finally:
                 self.num_connecting -= 1
         if not socket.closed:

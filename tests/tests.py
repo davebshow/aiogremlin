@@ -5,10 +5,12 @@ import asyncio
 import itertools
 import unittest
 import uuid
+
+import aiohttp
 from aiogremlin import (GremlinClient, RequestError, GremlinServerError,
                         SocketClientError, WebSocketPool, GremlinFactory,
                         create_client, GremlinWriter, GremlinResponse,
-                        WebSocketSession)
+                        GremlinClientWebSocketResponse)
 
 
 class GremlinClientTests(unittest.TestCase):
@@ -48,7 +50,7 @@ class GremlinClientPoolTests(unittest.TestCase):
         asyncio.set_event_loop(None)
         pool = WebSocketPool("ws://localhost:8182/", loop=self.loop)
         self.gc = GremlinClient(url="ws://localhost:8182/",
-                                factory=GremlinFactory(),
+                                factory=GremlinFactory(loop=self.loop),
                                 pool=pool,
                                 loop=self.loop)
 
@@ -142,7 +144,7 @@ class WebSocketPoolTests(unittest.TestCase):
                                   poolsize=2,
                                   timeout=1,
                                   loop=self.loop,
-                                  factory=GremlinFactory())
+                                  factory=GremlinFactory(loop=self.loop))
 
     def tearDown(self):
         self.loop.run_until_complete(self.pool.close())
@@ -239,7 +241,7 @@ class ContextMngrTest(unittest.TestCase):
         self.pool = WebSocketPool("ws://localhost:8182/",
                                   poolsize=1,
                                   loop=self.loop,
-                                  factory=GremlinFactory(),
+                                  factory=GremlinFactory(loop=self.loop),
                                   max_retries=0)
 
     def tearDown(self):
@@ -338,14 +340,18 @@ class GremlinClientPoolSessionTests(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        pool = WebSocketPool("ws://localhost:8182/",
-                             loop=self.loop,
-                             factory=WebSocketSession(loop=self.loop))
+        pool = WebSocketPool(
+            "ws://localhost:8182/",
+            loop=self.loop,
+            factory=aiohttp.ClientSession(
+                loop=self.loop,
+                ws_response_class=GremlinClientWebSocketResponse))
         self.gc = GremlinClient("ws://localhost:8182/",
                                 pool=pool,
                                 loop=self.loop)
 
     def tearDown(self):
+        self.gc._pool._factory.close()
         self.loop.run_until_complete(self.gc.close())
         self.loop.close()
 

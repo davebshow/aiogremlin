@@ -5,7 +5,7 @@ import ssl
 
 import aiohttp
 
-from aiogremlin.connection import (GremlinFactory, WebSocketSession,
+from aiogremlin.connection import (GremlinFactory,
                                    GremlinClientWebSocketResponse)
 from aiogremlin.exceptions import RequestError
 from aiogremlin.log import logger, INFO
@@ -23,7 +23,7 @@ def create_client(*, url='ws://localhost:8182/', loop=None,
                   timeout=None, verbose=False, fill_pool=True, connector=None):
 
     if factory is None:
-        factory = WebSocketSession(
+        factory = aiohttp.ClientSession(
             connector=connector,
             ws_response_class=GremlinClientWebSocketResponse,
             loop=loop)
@@ -79,7 +79,8 @@ class GremlinClient:
         else:
             self._connected = False
             self._conn = asyncio.async(self._connect(), loop=self._loop)
-        self._factory = factory or GremlinFactory(connector=self._connector)
+        self._factory = factory or GremlinFactory(connector=self._connector,
+                                                  loop=self._loop)
         if verbose:
             logger.setLevel(INFO)
 
@@ -101,8 +102,7 @@ class GremlinClient:
     def _connect(self):
         """
         """
-        connection = yield from self._factory.ws_connect(self.url,
-                                                         loop=self._loop)
+        connection = yield from self._factory.ws_connect(self.url)
         self._connected = True
         return connection
 
