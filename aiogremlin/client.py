@@ -198,22 +198,15 @@ class GremlinResponseStream:
 
     @asyncio.coroutine
     def read(self):
-        # For 3.0.0.M9
-        # if self._stream.at_eof():
-        #     self._pool.release(self._conn)
-        #     message = None
-        # else:
-            # asyncio.async(self._conn.receive())
-        # This will be different 3.0.0.M9
-        try:
-            yield from self._conn.receive()
-        except RequestError:
-            if self._pool:
-                self._pool.release(self._conn)
-        if self._stream.is_eof():
+        if self._stream.at_eof():
             if self._pool:
                 self._pool.release(self._conn)
             message = None
         else:
-            message = yield from self._stream.read()
+            asyncio.async(self._conn.receive(), loop=self._loop)
+            try:
+                message = yield from self._stream.read()
+            except RequestError:
+                if self._pool:
+                    self._pool.release(self._conn)
         return message
