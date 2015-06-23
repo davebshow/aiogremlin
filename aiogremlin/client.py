@@ -28,6 +28,7 @@ def submit(gremlin, *,
         connector=connector, ws_response_class=GremlinClientWebSocketResponse)
 
     gremlin_client = GremlinClient(url=url, connector=client_session)
+
     try:
         resp = yield from gremlin_client.submit(
             gremlin, bindings=bindings, lang=lang, op=op, processor=processor)
@@ -55,6 +56,7 @@ class SimpleGremlinClient:
         """
         """
         writer = GremlinWriter(self._connection)
+
         connection = writer.write(gremlin, bindings=bindings, lang=lang, op=op,
                                   processor=processor, session=session,
                                   binary=binary)
@@ -102,6 +104,7 @@ class GremlinClient:
             return
 
         self._closed = True
+
         try:
             yield from self._connector.close()
         finally:
@@ -123,6 +126,7 @@ class GremlinClient:
             self.url, timeout=self._timeout)
 
         writer = GremlinWriter(ws)
+
         ws = writer.write(gremlin, bindings=bindings, lang=lang, op=op,
                           processor=processor, binary=binary,
                           session=self._session)
@@ -157,7 +161,7 @@ class GremlinClientSession(GremlinClient):
                          verbose=verbose, connector=connector)
 
         if session is None:
-            session = uuid4.uuid4()
+            session = str(uuid4.uuid4())
         self._session = session
 
     def set_session(self):
