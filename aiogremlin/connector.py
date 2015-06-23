@@ -15,7 +15,6 @@ class GremlinConnector(WebSocketConnector):
         kwargs["ws_response_class"] = GremlinClientWebSocketResponse
         super().__init__(*args, **kwargs)
 
-    @asyncio.coroutine
     def create_client(self, *, url='ws://localhost:8182/', loop=None,
                       protocol=None, lang="gremlin-groovy", op="eval",
                       processor="", verbose=False):

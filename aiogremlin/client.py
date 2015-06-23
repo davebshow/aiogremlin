@@ -119,7 +119,8 @@ class GremlinClient:
         op = op or self.op
         processor = processor or self.processor
 
-        ws = self._connector.ws_connect(self.url, timeout=self._timeout)
+        ws = yield from self._connector.ws_connect(
+            self.url, timeout=self._timeout)
 
         writer = GremlinWriter(ws)
         ws = writer.write(gremlin, bindings=bindings, lang=lang, op=op,
