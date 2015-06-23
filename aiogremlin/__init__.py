@@ -1,7 +1,7 @@
-from .connection import *
+from .response import *
 from .client import *
 from .exceptions import *
-from .pool import *
+from .connector import *
 from .subprotocol import *
 
-__version__ = "0.0.9"
+__version__ = "0.0.10"

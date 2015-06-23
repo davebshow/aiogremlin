@@ -61,7 +61,7 @@ class GremlinWriter:
         message = json.dumps(message)
         if binary:
             message = self._set_message_header(message, mime_type)
-        self._connection.send(message, binary)
+        self._connection.send(message, binary=binary)
         return self._connection
 
     @staticmethod
@@ -87,6 +87,7 @@ class GremlinWriter:
             }
         }
         if processor == "session":
+            # idk about this autogenerate here with new class
             session = session or str(uuid.uuid4())
             message["args"]["session"] = session
             logger.info(
