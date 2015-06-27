@@ -2,75 +2,101 @@
 """
 
 import asyncio
-import itertools
 import unittest
 import uuid
 
-import aiohttp
-from aiogremlin import (GremlinClient, RequestError, GremlinServerError,
-                        SocketClientError, WebSocketPool, GremlinFactory,
-                        create_client, GremlinWriter, GremlinResponse,
-                        GremlinClientWebSocketResponse)
+from aiogremlin import (submit, SimpleGremlinClient, GremlinConnector,
+                        GremlinClient, GremlinClientSession)
 
 
-class GremlinClientTests(unittest.TestCase):
+class SubmitTest(unittest.TestCase):
 
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        self.gc = GremlinClient("ws://localhost:8182/", loop=self.loop)
 
     def tearDown(self):
-        self.loop.run_until_complete(self.gc.close())
         self.loop.close()
 
-    def test_connection(self):
-        @asyncio.coroutine
-        def conn_coro():
-            conn = yield from self.gc._acquire()
-            self.assertFalse(conn.closed)
-            return conn
-        conn = self.loop.run_until_complete(conn_coro())
-        # Clean up the resource.
-        self.loop.run_until_complete(conn.close())
+    def test_submit(self):
 
-    def test_sub(self):
         @asyncio.coroutine
         def go():
-            resp = yield from self.gc.execute("x + x", bindings={"x": 4})
-            return resp
+            resp = yield from submit("4 + 4", bindings={"x": 4},
+                                     loop=self.loop)
+            results = yield from resp.get()
+            return results
+
         results = self.loop.run_until_complete(go())
         self.assertEqual(results[0].data[0], 8)
 
 
-class GremlinClientPoolTests(unittest.TestCase):
+class SimpleGremlinClientTest(unittest.TestCase):
 
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        pool = WebSocketPool("ws://localhost:8182/", loop=self.loop)
-        self.gc = GremlinClient(url="ws://localhost:8182/",
-                                factory=GremlinFactory(loop=self.loop),
-                                pool=pool,
-                                loop=self.loop)
+        self.connector = GremlinConnector(force_close=True, loop=self.loop)
+
+    def tearDown(self):
+        self.loop.close()
+
+    def test_submit(self):
+
+        @asyncio.coroutine
+        def go():
+            ws = yield from self.connector.ws_connect('ws://localhost:8182/')
+            client = SimpleGremlinClient(ws, loop=self.loop)
+            resp = yield from client.submit("4 + 4", bindings={"x": 4})
+            results = yield from resp.get()
+            return results
+
+        results = self.loop.run_until_complete(go())
+        self.assertEqual(results[0].data[0], 8)
+
+    def test_close(self):
+
+        @asyncio.coroutine
+        def go():
+            ws = yield from self.connector.ws_connect('ws://localhost:8182/')
+            client = SimpleGremlinClient(ws, loop=self.loop)
+            yield from client.close()
+            self.assertTrue(client.closed)
+            self.assertTrue(ws.closed)
+            self.assertIsNone(client._connection)
+
+        results = self.loop.run_until_complete(go())
+
+
+class GremlinClientTest(unittest.TestCase):
+
+    def setUp(self):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(None)
+        self.gc = GremlinClient(url="ws://localhost:8182/", loop=self.loop)
 
     def tearDown(self):
         self.loop.run_until_complete(self.gc.close())
         self.loop.close()
 
     def test_connection(self):
-        @asyncio.coroutine
-        def conn_coro():
-            conn = yield from self.gc._acquire()
-            self.assertFalse(conn.closed)
-            return conn
-        conn = self.loop.run_until_complete(conn_coro())
-        # Clean up the resource.
-        self.loop.run_until_complete(conn.close())
 
-    def test_sub(self):
-        execute = self.gc.execute("x + x", bindings={"x": 4})
-        results = self.loop.run_until_complete(execute)
+        @asyncio.coroutine
+        def go():
+            ws = yield from self.gc._connector.ws_connect(self.gc.url)
+            self.assertFalse(ws.closed)
+            yield from ws.close()
+
+        self.loop.run_until_complete(go())
+
+    def test_execute(self):
+
+        @asyncio.coroutine
+        def go():
+            resp = yield from self.gc.execute("x + x", bindings={"x": 4})
+            return resp
+
+        results = self.loop.run_until_complete(go())
         self.assertEqual(results[0].data[0], 8)
 
     def test_sub_waitfor(self):
@@ -98,14 +124,6 @@ class GremlinClientPoolTests(unittest.TestCase):
             self.assertEqual(results[0].data[0], 8)
         self.loop.run_until_complete(stream_coro())
 
-    def test_resp_get(self):
-        @asyncio.coroutine
-        def get_coro():
-            conn = yield from self.gc.submit("x + x", bindings={"x": 4})
-            results = yield from conn.get()
-            self.assertEqual(results[0].data[0], 8)
-        self.loop.run_until_complete(get_coro())
-
     def test_execute_error(self):
         execute = self.gc.execute("x + x g.asdfas", bindings={"x": 4})
         try:
@@ -115,122 +133,89 @@ class GremlinClientPoolTests(unittest.TestCase):
             error = True
         self.assertTrue(error)
 
-    def test_session_gen(self):
-        execute = self.gc.execute("x + x", processor="session",
-                                  bindings={"x": 4})
-        results = self.loop.run_until_complete(execute)
-        self.assertEqual(results[0].data[0], 8)
+
+class GremlinClientSessionTest(unittest.TestCase):
+
+    def setUp(self):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(None)
+        self.gc = GremlinClientSession(url="ws://localhost:8182/",
+                                       loop=self.loop)
+        self.script1 = """graph = TinkerFactory.createModern()
+                          g = graph.traversal(standard())"""
+
+        self.script2 = "g.V().has('name','marko').out('knows').values('name')"
+
+    def tearDown(self):
+        self.loop.run_until_complete(self.gc.close())
+        self.loop.close()
 
     def test_session(self):
+
         @asyncio.coroutine
-        def stream_coro():
+        def go():
+            yield from self.gc.execute(self.script1)
+            results = yield from self.gc.execute(self.script2)
+            return results
+
+        results = self.loop.run_until_complete(go())
+        self.assertTrue(len(results[0].data), 2)
+
+    def test_session_reset(self):
+
+        @asyncio.coroutine
+        def go():
+            yield from self.gc.execute(self.script1)
+            self.gc.reset_session()
+            results = yield from self.gc.execute(self.script2)
+            return results
+
+        results = self.loop.run_until_complete(go())
+        self.assertIsNone(results[0].data)
+
+    def test_session_manual_reset(self):
+
+        @asyncio.coroutine
+        def go():
+            yield from self.gc.execute(self.script1)
+            new_sess = str(uuid.uuid4())
+            sess = self.gc.reset_session(session=new_sess)
+            self.assertEqual(sess, new_sess)
+            self.assertEqual(self.gc.session, new_sess)
+            results = yield from self.gc.execute(self.script2)
+            return results
+
+        results = self.loop.run_until_complete(go())
+        self.assertIsNone(results[0].data)
+
+    def test_session_set(self):
+
+        @asyncio.coroutine
+        def go():
+            yield from self.gc.execute(self.script1)
+            new_sess = str(uuid.uuid4())
+            self.gc.session = new_sess
+            self.assertEqual(self.gc.session, new_sess)
+            results = yield from self.gc.execute(self.script2)
+            return results
+
+        results = self.loop.run_until_complete(go())
+        self.assertIsNone(results[0].data)
+
+    def test_resp_session(self):
+
+        @asyncio.coroutine
+        def go():
             session = str(uuid.uuid4())
-            resp = yield from self.gc.submit("x + x", bindings={"x": 4},
-                                             session=session)
+            self.gc.session = session
+            resp = yield from self.gc.submit("x + x", bindings={"x": 4})
             while True:
                 f = yield from resp.stream.read()
                 if f is None:
                     break
             self.assertEqual(resp.session, session)
-        self.loop.run_until_complete(stream_coro())
 
-
-class WebSocketPoolTests(unittest.TestCase):
-
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(None)
-        self.pool = WebSocketPool("ws://localhost:8182/",
-                                  poolsize=2,
-                                  timeout=1,
-                                  loop=self.loop,
-                                  factory=GremlinFactory(loop=self.loop))
-
-    def tearDown(self):
-        self.loop.run_until_complete(self.pool.close())
-        self.loop.close()
-
-    def test_connect(self):
-
-        @asyncio.coroutine
-        def conn():
-            conn = yield from self.pool.acquire()
-            self.assertFalse(conn.closed)
-            self.pool.release(conn)
-            self.assertEqual(self.pool.num_active_conns, 0)
-
-        self.loop.run_until_complete(conn())
-
-    def test_multi_connect(self):
-
-        @asyncio.coroutine
-        def conn():
-            conn1 = yield from self.pool.acquire()
-            conn2 = yield from self.pool.acquire()
-            self.assertFalse(conn1.closed)
-            self.assertFalse(conn2.closed)
-            self.pool.release(conn1)
-            self.assertEqual(self.pool.num_active_conns, 1)
-            self.pool.release(conn2)
-            self.assertEqual(self.pool.num_active_conns, 0)
-
-        self.loop.run_until_complete(conn())
-
-    def test_timeout(self):
-
-        @asyncio.coroutine
-        def conn():
-            conn1 = yield from self.pool.acquire()
-            conn2 = yield from self.pool.acquire()
-            try:
-                conn3 = yield from self.pool.acquire()
-                timeout = False
-            except asyncio.TimeoutError:
-                timeout = True
-            self.assertTrue(timeout)
-
-        self.loop.run_until_complete(conn())
-
-    def test_socket_reuse(self):
-
-        @asyncio.coroutine
-        def conn():
-            conn1 = yield from self.pool.acquire()
-            conn2 = yield from self.pool.acquire()
-            try:
-                conn3 = yield from self.pool.acquire()
-                timeout = False
-            except asyncio.TimeoutError:
-                timeout = True
-            self.assertTrue(timeout)
-            self.pool.release(conn2)
-            conn3 = yield from self.pool.acquire()
-            self.assertFalse(conn1.closed)
-            self.assertFalse(conn3.closed)
-            self.assertEqual(conn2, conn3)
-
-        self.loop.run_until_complete(conn())
-
-    def test_socket_repare(self):
-
-        @asyncio.coroutine
-        def conn():
-            conn1 = yield from self.pool.acquire()
-            conn2 = yield from self.pool.acquire()
-            self.assertFalse(conn1.closed)
-            self.assertFalse(conn2.closed)
-            yield from conn1.close()
-            yield from conn2.close()
-            self.assertTrue(conn2.closed)
-            self.assertTrue(conn2.closed)
-            self.pool.release(conn1)
-            self.pool.release(conn2)
-            conn1 = yield from self.pool.acquire()
-            conn2 = yield from self.pool.acquire()
-            self.assertFalse(conn1.closed)
-            self.assertFalse(conn2.closed)
-
-        self.loop.run_until_complete(conn())
+        self.loop.run_until_complete(go())
 
 
 class ContextMngrTest(unittest.TestCase):
@@ -238,164 +223,26 @@ class ContextMngrTest(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        self.pool = WebSocketPool("ws://localhost:8182/",
-                                  poolsize=1,
-                                  loop=self.loop,
-                                  factory=GremlinFactory(loop=self.loop),
-                                  max_retries=0)
+        self.connector = GremlinConnector(loop=self.loop)
 
     def tearDown(self):
-        self.loop.run_until_complete(self.pool.close())
+        self.loop.run_until_complete(self.connector.close())
         self.loop.close()
-
-    @asyncio.coroutine
-    def _check_closed(self):
-        conn = self.pool._pool.get_nowait()
-        self.assertTrue(conn.closed)
-        writer = GremlinWriter(conn)
-        try:
-            conn = yield from writer.write("1 + 1")
-            error = False
-        except RuntimeError:
-            error = True
-        self.assertTrue(error)
 
     def test_connection_manager(self):
         results = []
 
         @asyncio.coroutine
         def go():
-            with (yield from self.pool) as conn:
-                writer = GremlinWriter(conn)
-                conn = writer.write("1 + 1")
-                resp = GremlinResponse(conn, pool=self.pool, loop=self.loop)
+            with (yield from self.connector) as conn:
+                client = SimpleGremlinClient(conn, loop=self.loop)
+                resp = yield from client.submit("1 + 1")
                 while True:
                     mssg = yield from resp.stream.read()
                     if mssg is None:
                         break
                     results.append(mssg)
-            # Test that connection was closed
-            yield from self._check_closed()
         self.loop.run_until_complete(go())
-
-    def test_connection_manager_with_client(self):
-        @asyncio.coroutine
-        def go():
-            with (yield from self.pool) as conn:
-                gc = GremlinClient(connection=conn, loop=self.loop)
-                resp = yield from gc.submit("1 + 1")
-                self.assertEqual(conn, resp.stream._conn)
-                result = yield from resp.get()
-                self.assertEqual(result[0].data[0], 2)
-
-                self.pool.release(conn)
-            # Test that connection was closed
-            yield from self._check_closed()
-        self.loop.run_until_complete(go())
-
-    def test_connection_manager_with_client_closed_conn(self):
-        @asyncio.coroutine
-        def go():
-            with (yield from self.pool) as conn:
-                conn._closing = True
-                conn._close()
-                gc = GremlinClient(connection=conn, loop=self.loop)
-                resp = yield from gc.submit("1 + 1")
-                self.assertNotEqual(conn, resp.stream._conn)
-                result = yield from resp.get()
-                self.assertEqual(result[0].data[0], 2)
-                yield from resp.stream._conn.close()
-            # Test that connection was closed
-        self.loop.run_until_complete(go())
-
-    def test_connection_manager_error(self):
-        results = []
-
-        @asyncio.coroutine
-        def go():
-            with (yield from self.pool) as conn:
-                writer = GremlinWriter(conn)
-                conn = writer.write("1 + 1 sdalfj;sd")
-                resp = GremlinResponse(conn, pool=self.pool, loop=self.loop)
-                try:
-                    while True:
-                        mssg = yield from resp.stream.read()
-                        if mssg is None:
-                            break
-                        results.append(mssg)
-                except:
-                    self.pool.release(conn)
-                    raise
-        try:
-            self.loop.run_until_complete(go())
-            err = False
-        except:
-            err = True
-        self.assertTrue(err)
-        self.loop.run_until_complete(self._check_closed())
-
-
-class GremlinClientPoolSessionTests(unittest.TestCase):
-
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(None)
-        pool = WebSocketPool(
-            "ws://localhost:8182/",
-            loop=self.loop,
-            factory=aiohttp.ClientSession(
-                loop=self.loop,
-                ws_response_class=GremlinClientWebSocketResponse))
-        self.gc = GremlinClient("ws://localhost:8182/",
-                                pool=pool,
-                                loop=self.loop)
-
-    def tearDown(self):
-        self.gc._pool._factory.close()
-        self.loop.run_until_complete(self.gc.close())
-        self.loop.close()
-
-    def test_connection(self):
-        @asyncio.coroutine
-        def conn_coro():
-            conn = yield from self.gc._acquire()
-            self.assertFalse(conn.closed)
-            return conn
-        conn = self.loop.run_until_complete(conn_coro())
-        # Clean up the resource.
-        self.loop.run_until_complete(conn.close())
-
-    def test_sub(self):
-        execute = self.gc.execute("x + x", bindings={"x": 4})
-        results = self.loop.run_until_complete(execute)
-        self.assertEqual(results[0].data[0], 8)
-
-    def test_sub_waitfor(self):
-        sub1 = self.gc.execute("x + x", bindings={"x": 1})
-        sub2 = self.gc.execute("x + x", bindings={"x": 2})
-        sub3 = self.gc.execute("x + x", bindings={"x": 4})
-        coro = asyncio.gather(*[asyncio.async(sub1, loop=self.loop),
-                              asyncio.async(sub2, loop=self.loop),
-                              asyncio.async(sub3, loop=self.loop)],
-                              loop=self.loop)
-        # Here I am looking for resource warnings.
-        results = self.loop.run_until_complete(coro)
-        self.assertIsNotNone(results)
-
-
-class CreateClientTests(unittest.TestCase):
-
-    def test_pool_init(self):
-        @asyncio.coroutine
-        def go(loop):
-            gc = yield from create_client(poolsize=10, loop=loop)
-            self.assertEqual(gc._pool._pool.qsize(), 10)
-            yield from gc.close()
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(None)
-        loop.run_until_complete(go(loop))
-        loop.close()
 
 
 if __name__ == "__main__":

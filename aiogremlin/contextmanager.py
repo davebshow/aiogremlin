@@ -1,24 +1,19 @@
-from aiogremlin.client import SimpleGremlinClient
-
-
 class ConnectionContextManager:
 
-    __slots__ = ("_conn")
+    __slots__ = ("_ws")
 
-    def __init__(self, conn):
-        self._conn = conn
-        self._client = SimpleGremlinClient(conn)
+    def __init__(self, ws):
+        self._ws = ws
 
     def __enter__(self):
-        if self._conn.closed:
+        if self._ws.closed:
             raise RuntimeError("Connection closed unexpectedly.")
-        return self._client
+        return self._ws
 
     def __exit__(self, exception_type, exception_value, traceback):
         try:
-            self._conn._close_code = 1000
-            self._conn._closing = True
-            self._conn._close()
+            self._ws._close_code = 1000
+            self._ws._closing = True
+            self._ws._do_close()
         finally:
-            self._conn = None
-            self._client = None
+            self._ws = None

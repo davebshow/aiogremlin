@@ -1,6 +1,5 @@
 """Implements the Gremlin Server subprotocol."""
 
-import asyncio
 import collections
 import uuid
 
@@ -10,9 +9,8 @@ except ImportError:
     import json
 
 from aiogremlin.exceptions import RequestError, GremlinServerError
-from aiogremlin.log import logger
 
-__all__ = ("GremlinWriter",)
+__all__ = ("GremlinWriter", "gremlin_response_parser")
 
 
 Message = collections.namedtuple(
@@ -86,10 +84,9 @@ class GremlinWriter:
                 "language":  lang
             }
         }
-        if processor == "session":
-            # idk about this autogenerate here with new class
-            session = session or str(uuid.uuid4())
-            message["args"]["session"] = session
-            logger.info(
-                "Session ID: {}".format(message["args"]["session"]))
+        if session is None:
+            if processor == "session":
+                raise RuntimeError("session processor requires a session id")
+        else:
+            message["args"].update({"session": session})
         return message

@@ -11,7 +11,7 @@ from aiowebsocketclient.connector import ClientWebSocketResponse
 from aiogremlin.exceptions import SocketClientError
 from aiogremlin.log import INFO, logger
 
-__all__ = ('GremlinClientWebSocketResponse')
+__all__ = ('GremlinClientWebSocketResponse',)
 
 
 class GremlinClientWebSocketResponse(ClientWebSocketResponse):
