@@ -13,6 +13,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import alabaster
 import sys
 import os
 import shlex
@@ -33,6 +34,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
+    'sphinx.ext.intersphinx',
+    'alabaster'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -117,10 +120,18 @@ html_theme = 'alabaster'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {
+    # 'logo': 'logo.png',
+    'description': 'Async client for the TP3 Gremlin Server',
+    'logo_text_align': 'left',
+    'github_user': 'davebshow',
+    'github_repo': 'aiogremlin',
+    'github_button': True,
+    'github_banner': True
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
+html_theme_path = [alabaster.get_path()]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -157,7 +168,11 @@ html_static_path = ['_static']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+html_sidebars = {
+    '**': [
+        'about.html', 'navigation.html', 'searchbox.html', 'donate.html',
+    ]
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
@@ -286,3 +301,6 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3.4', None),
+    'aiohttp': ('http://aiohttp.readthedocs.org/en/stable/', None)}

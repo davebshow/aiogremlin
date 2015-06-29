@@ -1,5 +1,7 @@
 """
+Class used to pass messages with the Gremlin Server.
 """
+
 import asyncio
 import base64
 import hashlib
@@ -8,8 +10,6 @@ import os
 import aiohttp
 
 from aiowebsocketclient.connector import ClientWebSocketResponse
-from aiogremlin.exceptions import SocketClientError
-from aiogremlin.log import INFO, logger
 
 __all__ = ('GremlinClientWebSocketResponse',)
 

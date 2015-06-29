@@ -7,119 +7,72 @@ import aiohttp
 
 from aiogremlin.response import GremlinClientWebSocketResponse
 from aiogremlin.exceptions import RequestError
-from aiogremlin.log import logger, INFO
 from aiogremlin.connector import GremlinConnector
 from aiogremlin.subprotocol import gremlin_response_parser, GremlinWriter
 
-__all__ = ("submit", "SimpleGremlinClient", "GremlinClient",
-           "GremlinClientSession")
+__all__ = ("submit", "GremlinClient", "GremlinClientSession",
+           "GremlinResponse", "GremlinResponseStream")
 
 
-class BaseGremlinClient:
+class GremlinClient:
+    """Main interface for interacting with the Gremlin Server.
 
-    def __init__(self, *, lang="gremlin-groovy", op="eval", processor="",
-                 loop=None, verbose=False):
+    :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
+        by default
+    :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
+        `asyncio.get_event_loop` is used for getting default event loop
+        (optional)
+    :param str lang: Language of scripts submitted to the server.
+        "gremlin-groovy" by default
+    :param str op: Gremlin Server op argument. "eval" by default.
+    :param str processor: Gremlin Server processor argument. "" by default.
+    :param float timeout: timeout for establishing connection (optional).
+        Values ``0`` or ``None`` mean no timeout
+    :param connector: A class that implements the method ``ws_connect``.
+        Usually an instance of ``aiogremlin.connector.GremlinConnector``
+    """
+
+    def __init__(self, *, url='ws://localhost:8182/', loop=None,
+                 lang="gremlin-groovy", op="eval", processor="",
+                 timeout=None, ws_connector=None):
+        """
+        """
         self._lang = lang
         self._op = op
         self._processor = processor
         self._loop = loop or asyncio.get_event_loop()
         self._closed = False
-        if verbose:
-            logger.setLevel(INFO)
+        self._session = None
+        self._url = url
+        self._timeout = timeout
+        if ws_connector is None:
+            ws_connector = GremlinConnector(loop=self._loop)
+        self._connector = ws_connector
 
     @property
     def loop(self):
+        """Readonly property that returns event loop used by client"""
         return self._loop
 
     @property
     def op(self):
+        """Readonly property that returns op argument for Gremlin Server"""
         return self._op
 
     @property
     def processor(self):
+        """Readonly property. The processor argument for Gremlin
+        Server"""
         return self._processor
 
     @property
     def lang(self):
+        """Readonly property. The language used for Gremlin scripts"""
         return self._lang
-
-    def submit(self):
-        raise NotImplementedError
-
-    @asyncio.coroutine
-    def execute(self, gremlin, *, bindings=None, lang=None,
-                op=None, processor=None, binary=True):
-        """
-        """
-        lang = lang or self.lang
-        op = op or self.op
-        processor = processor or self.processor
-        resp = yield from self.submit(gremlin, bindings=bindings, lang=lang,
-                                      op=op, processor=processor,
-                                      binary=binary)
-
-        return (yield from resp.get())
-
-
-class SimpleGremlinClient(BaseGremlinClient):
-
-    def __init__(self, connection, *, lang="gremlin-groovy", op="eval",
-                 processor="", loop=None, verbose=False):
-        """This class is primarily designed to be used in the context
-        `manager"""
-        super().__init__(lang=lang, op=op, processor=processor, loop=loop,
-                         verbose=verbose)
-        self._connection = connection
-
-    @asyncio.coroutine
-    def close(self):
-        if self._closed:
-            return
-        self._closed = True
-        try:
-            yield from self._connection.release()
-        finally:
-            self._connection = None
-
-    @property
-    def closed(self):
-        return (self._closed or self._connection.closed or
-                self._connection is None)
-
-    @asyncio.coroutine
-    def submit(self, gremlin, *, bindings=None, lang="gremlin-groovy",
-               op="eval", processor="", session=None, binary=True):
-        """
-        """
-        writer = GremlinWriter(self._connection)
-
-        connection = writer.write(gremlin, bindings=bindings, lang=lang, op=op,
-                                  processor=processor, session=session,
-                                  binary=binary)
-
-        return GremlinResponse(self._connection,
-                               session=session,
-                               loop=self._loop)
-
-
-class GremlinClient(BaseGremlinClient):
-
-    def __init__(self, *, url='ws://localhost:8182/', loop=None,
-                 protocols=None, lang="gremlin-groovy", op="eval",
-                 processor="", timeout=None, verbose=False, connector=None):
-        """
-        """
-        super().__init__(lang=lang, op=op, processor=processor, loop=loop,
-                         verbose=verbose)
-        self._url = url
-        self._timeout = timeout
-        self._session = None
-        if connector is None:
-            connector = GremlinConnector(loop=self._loop)
-        self._connector = connector
 
     @property
     def url(self):
+        """Getter/setter for database url used by the client"""
         return self._url
 
     @url.setter
@@ -128,10 +81,13 @@ class GremlinClient(BaseGremlinClient):
 
     @property
     def closed(self):
+        """Readonly property. Return True if client has been closed"""
         return self._closed or self._connector is None
 
     @asyncio.coroutine
     def close(self):
+        """Close client. If client has not been detached from underlying
+        ws_connector, this coroutinemethod closes the latter as well."""
         if self._closed:
             return
         self._closed = True
@@ -141,40 +97,72 @@ class GremlinClient(BaseGremlinClient):
             self._connector = None
 
     def detach(self):
+        """Detach client from ws_connector. Client status is now closed"""
         self._connector = None
 
     @asyncio.coroutine
     def submit(self, gremlin, *, bindings=None, lang=None,
-               op=None, processor=None, binary=True):
+               op=None, processor=None, binary=True, session=None,
+               timeout=None):
         """
         """
         lang = lang or self.lang
         op = op or self.op
         processor = processor or self.processor
+        if session is None:
+            session = self._session
+        if timeout is None:
+            timeout = self._timeout
 
         ws = yield from self._connector.ws_connect(
-            self.url, timeout=self._timeout)
+            self.url, timeout=timeout)
 
         writer = GremlinWriter(ws)
 
         ws = writer.write(gremlin, bindings=bindings, lang=lang, op=op,
                           processor=processor, binary=binary,
-                          session=self._session)
+                          session=session)
 
-        return GremlinResponse(ws, session=self._session, loop=self._loop)
+        return GremlinResponse(ws, session=session, loop=self._loop)
+
+    @asyncio.coroutine
+    def execute(self, gremlin, *, bindings=None, lang=None, session=None,
+                op=None, processor=None, binary=True, timeout=None):
+        """
+        """
+        lang = lang or self.lang
+        op = op or self.op
+        processor = processor or self.processor
+        resp = yield from self.submit(gremlin, bindings=bindings, lang=lang,
+                                      op=op, processor=processor,
+                                      binary=binary, session=session,
+                                      timeout=timeout)
+
+        return (yield from resp.get())
 
 
 class GremlinClientSession(GremlinClient):
+    """Interface for interacting with the Gremlin Server using sessions.
+
+    :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
+        by default
+    :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
+        `asyncio.get_event_loop` is used for getting default event loop
+        (optional)
+    :param str lang: Language of scripts submitted to the server.
+        "gremlin-groovy" by default
+    :param str op: Gremlin Server op argument. "eval" by default.
+    :param str processor: Gremlin Server processor argument. "" by default.
+    :param float timeout: timeout for establishing connection (optional).
+        Values ``0`` or ``None`` mean no timeout
+    """
 
     def __init__(self, *, url='ws://localhost:8182/', loop=None,
-                 protocols=None, lang="gremlin-groovy", op="eval",
-                 processor="session", session=None, timeout=None,
-                 verbose=False, connector=None):
-        """
-        """
-        super().__init__(url=url, protocols=protocols, lang=lang, op=op,
-                         processor=processor, loop=loop, timeout=timeout,
-                         verbose=verbose, connector=connector)
+                 lang="gremlin-groovy", op="eval", processor="session",
+                 session=None, timeout=None,
+                 ws_connector=None):
+        super().__init__(url=url, lang=lang, op=op, processor=processor,
+                         loop=loop, timeout=timeout, ws_connector=ws_connector)
 
         if session is None:
             session = str(uuid.uuid4())
@@ -196,7 +184,16 @@ class GremlinClientSession(GremlinClient):
 
 
 class GremlinResponse:
+    """Main interface for reading Gremlin Server responses. Typically returned
+    by ``GremlinClient.submit``, not created by user.
 
+    :param ``aiogremlin.response.GremlinClientWebSocketResponse`` ws: Websocket
+        connection.
+    :param str session: Session id (optional). Typically a uuid
+    :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
+        `asyncio.get_event_loop` is used for getting default event loop
+        (optional)
+    """
     def __init__(self, ws, *, session=None, loop=None):
         self._loop = loop or asyncio.get_event_loop()
         self._session = session
@@ -228,7 +225,16 @@ class GremlinResponse:
 
 
 class GremlinResponseStream:
+    """
+    Encapsulate and read Gremlin Server responses. Typically instantiated by
+    GremlinResponse constructor, not by user.
 
+    :param ``aiogremlin.response.GremlinClientWebSocketResponse`` ws: Websocket
+        connection.
+    :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
+        `asyncio.get_event_loop` is used for getting default event loop
+        (optional)
+    """
     def __init__(self, ws, loop=None):
         self._ws = ws
         self._loop = loop or asyncio.get_event_loop()
@@ -238,6 +244,7 @@ class GremlinResponseStream:
 
     @asyncio.coroutine
     def read(self):
+        """Read a message from the stream"""
         if self._stream.at_eof():
             yield from self._ws.release()
             message = None
@@ -258,8 +265,24 @@ def submit(gremlin, *,
            lang="gremlin-groovy",
            op="eval",
            processor="",
-           connector=None,
+           timeout=None,
+           session=None,
            loop=None):
+    """Submit a script to the Gremlin Server.
+
+    :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
+        by default
+    :param str lang: Language of scripts submitted to the server.
+        "gremlin-groovy" by default
+    :param str op: Gremlin Server op argument. "eval" by default.
+    :param str processor: Gremlin Server processor argument. "" by default.
+    :param float timeout: timeout for establishing connection (optional).
+        Values ``0`` or ``None`` mean no timeout
+    :param str session: Session id (optional). Typically a uuid
+    :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
+        `asyncio.get_event_loop` is used for getting default event loop
+        (optional)
+    """
 
     if loop is None:
         loop = asyncio.get_event_loop()
@@ -271,11 +294,12 @@ def submit(gremlin, *,
         ws_response_class=GremlinClientWebSocketResponse)
 
     gremlin_client = GremlinClient(url=url, loop=loop,
-                                   connector=client_session)
+                                   ws_connector=client_session)
 
     try:
         resp = yield from gremlin_client.submit(
-            gremlin, bindings=bindings, lang=lang, op=op, processor=processor)
+            gremlin, bindings=bindings, lang=lang, op=op, processor=processor,
+            session=session, timeout=timeout)
 
         return resp
 

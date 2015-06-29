@@ -1,5 +1,15 @@
-API
-===
+.. _aiogremlin-client-reference:
+
+Client Reference
+================
+
+aiogremlin package
+-------------------------
+
+.. automodule:: aiogremlin
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 aiogremlin.client module
 ------------------------
@@ -16,27 +26,12 @@ aiogremlin.connector module
     :members:
     :undoc-members:
     :show-inheritance:
-
-aiogremlin.contextmanager module
---------------------------------
-
-.. automodule:: aiogremlin.contextmanager
-    :members:
-    :undoc-members:
-    :show-inheritance:
+    :inherited-members:
 
 aiogremlin.exceptions module
 ----------------------------
 
 .. automodule:: aiogremlin.exceptions
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-aiogremlin.log module
----------------------
-
-.. automodule:: aiogremlin.log
     :members:
     :undoc-members:
     :show-inheritance:
@@ -48,6 +43,7 @@ aiogremlin.response module
     :members:
     :undoc-members:
     :show-inheritance:
+    :inherited-members:
 
 aiogremlin.subprotocol module
 -----------------------------

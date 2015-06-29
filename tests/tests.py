@@ -5,8 +5,8 @@ import asyncio
 import unittest
 import uuid
 
-from aiogremlin import (submit, SimpleGremlinClient, GremlinConnector,
-                        GremlinClient, GremlinClientSession)
+from aiogremlin import (submit, GremlinConnector, GremlinClient,
+                        GremlinClientSession)
 
 
 class SubmitTest(unittest.TestCase):
@@ -29,43 +29,6 @@ class SubmitTest(unittest.TestCase):
 
         results = self.loop.run_until_complete(go())
         self.assertEqual(results[0].data[0], 8)
-
-
-class SimpleGremlinClientTest(unittest.TestCase):
-
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(None)
-        self.connector = GremlinConnector(force_close=True, loop=self.loop)
-
-    def tearDown(self):
-        self.loop.close()
-
-    def test_submit(self):
-
-        @asyncio.coroutine
-        def go():
-            ws = yield from self.connector.ws_connect('ws://localhost:8182/')
-            client = SimpleGremlinClient(ws, loop=self.loop)
-            resp = yield from client.submit("4 + 4", bindings={"x": 4})
-            results = yield from resp.get()
-            return results
-
-        results = self.loop.run_until_complete(go())
-        self.assertEqual(results[0].data[0], 8)
-
-    def test_close(self):
-
-        @asyncio.coroutine
-        def go():
-            ws = yield from self.connector.ws_connect('ws://localhost:8182/')
-            client = SimpleGremlinClient(ws, loop=self.loop)
-            yield from client.close()
-            self.assertTrue(client.closed)
-            self.assertTrue(ws.closed)
-            self.assertIsNone(client._connection)
-
-        results = self.loop.run_until_complete(go())
 
 
 class GremlinClientTest(unittest.TestCase):
@@ -229,20 +192,20 @@ class ContextMngrTest(unittest.TestCase):
         self.loop.run_until_complete(self.connector.close())
         self.loop.close()
 
-    def test_connection_manager(self):
-        results = []
-
-        @asyncio.coroutine
-        def go():
-            with (yield from self.connector) as conn:
-                client = SimpleGremlinClient(conn, loop=self.loop)
-                resp = yield from client.submit("1 + 1")
-                while True:
-                    mssg = yield from resp.stream.read()
-                    if mssg is None:
-                        break
-                    results.append(mssg)
-        self.loop.run_until_complete(go())
+    # def test_connection_manager(self):
+    #     results = []
+    #
+    #     @asyncio.coroutine
+    #     def go():
+    #         with (yield from self.connector) as conn:
+    #             client = SimpleGremlinClient(conn, loop=self.loop)
+    #             resp = yield from client.submit("1 + 1")
+    #             while True:
+    #                 mssg = yield from resp.stream.read()
+    #                 if mssg is None:
+    #                     break
+    #                 results.append(mssg)
+    #     self.loop.run_until_complete(go())
 
 
 if __name__ == "__main__":
