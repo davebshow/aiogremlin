@@ -12,7 +12,7 @@ based on the `asyncio`_ and `aiohttp`_ libraries.
 
 Releases
 ========
-The latest release of ``aiogremlin`` is **0.0.10**.
+The latest release of ``aiogremlin`` is **0.0.11**.
 
 
 Requirements
