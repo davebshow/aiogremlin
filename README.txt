@@ -8,4 +8,4 @@ aiogremlin - Async Python 3 driver for TP3 Gremlin Server
 `Official Documentation`_
 
 
-.. _Official Documentation: https://github.com/davebshow/aiogremlin
+.. _Official Documentation: http://aiogremlin.readthedocs.org/en/latest/

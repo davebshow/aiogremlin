@@ -1,4 +1,6 @@
-# aiogremlin 0.0.9 [(gizmo grew up)](https://pypi.python.org/pypi/gizmo/0.1.12)
+# [aiogremlin 0.0.9](https://pypi.python.org/pypi/gizmo/0.1.12)
+
+## [Official Documentation](http://aiogremlin.readthedocs.org/en/latest/)
 
 `aiogremlin` is a **Python 3** driver for the the [Tinkerpop 3 Gremlin Server](http://tinkerpop.incubator.apache.org/docs/3.0.0.M9-incubating/#gremlin-server). This module is built on [Asyncio](https://docs.python.org/3/library/asyncio.html) and [aiohttp](http://aiohttp.readthedocs.org/en/v0.15.3/index.html) `aiogremlin` is currently in **alpha** mode, but all major functionality has test coverage.
 
