@@ -75,19 +75,19 @@ ARGS.add_argument(
     help='number of tests (default: `%(default)s`)')
 ARGS.add_argument(
     '-n', '--count', action="store",
-    nargs='?', type=int, default=10000,
+    nargs='?', type=int, default=5000,
     help='message count (default: `%(default)s`)')
 ARGS.add_argument(
     '-c', '--concurrency', action="store",
-    nargs='?', type=int, default=100,
+    nargs='?', type=int, default=8,
     help='count of parallel requests (default: `%(default)s`)')
 ARGS.add_argument(
     '-p', '--poolsize', action="store",
-    nargs='?', type=int, default=100,
+    nargs='?', type=int, default=8,
     help='num connected websockets (default: `%(default)s`)')
 ARGS.add_argument(
     '-w', '--warmups', action="store",
-    nargs='?', type=int, default=5,
+    nargs='?', type=int, default=10,
     help='num warmups (default: `%(default)s`)')
 
 
@@ -100,11 +100,8 @@ if __name__ == "__main__":
     num_warmups = args.warmups
     loop = asyncio.get_event_loop()
     t1 = loop.time()
-    factory = aiogremlin.GremlinFactory()
-    client = loop.run_until_complete(
-        aiogremlin.create_client(loop=loop,
-                                 factory=factory,
-                                 poolsize=poolsize))
+    conn = aiogremlin.GremlinConnector(limit=poolsize)
+    client = aiogremlin.GremlinClient(ws_connector=conn)
     t2 = loop.time()
     print("time to establish conns: {}".format(t2 - t1))
     try:
