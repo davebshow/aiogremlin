@@ -10,7 +10,7 @@ except ImportError:
 
 from aiogremlin.exceptions import RequestError, GremlinServerError
 
-__all__ = ("GremlinWriter", "gremlin_response_parser")
+__all__ = ("GremlinWriter", "gremlin_response_parser", "Message")
 
 
 Message = collections.namedtuple(
@@ -43,8 +43,8 @@ def gremlin_response_parser(out, buf):
 
 class GremlinWriter:
 
-    def __init__(self, connection):
-        self._connection = connection
+    def __init__(self, ws):
+        self.ws = ws
 
     def write(self, gremlin, bindings=None, lang="gremlin-groovy", op="eval",
               processor="", session=None, binary=True,
@@ -59,8 +59,8 @@ class GremlinWriter:
         message = json.dumps(message)
         if binary:
             message = self._set_message_header(message, mime_type)
-        self._connection.send(message, binary=binary)
-        return self._connection
+        self.ws.send(message, binary=binary)
+        return self.ws
 
     @staticmethod
     def _set_message_header(message, mime_type):

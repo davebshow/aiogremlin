@@ -86,7 +86,10 @@ class GremlinClient:
 
     @asyncio.coroutine
     def close(self):
-        """Close client. If client has not been detached from underlying
+        """
+        :ref:`coroutine<coroutine>` method.
+
+        Close client. If client has not been detached from underlying
         ws_connector, this coroutinemethod closes the latter as well."""
         if self._closed:
             return
@@ -105,6 +108,23 @@ class GremlinClient:
                op=None, processor=None, binary=True, session=None,
                timeout=None):
         """
+        :ref:`coroutine<coroutine>` method.
+
+        Submit a script to the Gremlin Server.
+
+        :param str gremlin: Gremlin script to submit to server.
+        :param dict bindings: A mapping of bindings for Gremlin script.
+        :param str lang: Language of scripts submitted to the server.
+            "gremlin-groovy" by default
+        :param str op: Gremlin Server op argument. "eval" by default.
+        :param str processor: Gremlin Server processor argument. "" by default.
+        :param float timeout: timeout for establishing connection (optional).
+            Values ``0`` or ``None`` mean no timeout
+        :param str session: Session id (optional). Typically a uuid
+        :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``
+            `asyncio.get_event_loop` is used for getting default event loop
+            (optional)
+        :returns: :py:class:`aiogremlin.client.GremlinResponse` object
         """
         lang = lang or self.lang
         op = op or self.op
@@ -129,6 +149,24 @@ class GremlinClient:
     def execute(self, gremlin, *, bindings=None, lang=None, session=None,
                 op=None, processor=None, binary=True, timeout=None):
         """
+        :ref:`coroutine<coroutine>` method.
+
+        Submit a script to the Gremlin Server and get the result.
+
+        :param str gremlin: Gremlin script to submit to server.
+        :param dict bindings: A mapping of bindings for Gremlin script.
+        :param str lang: Language of scripts submitted to the server.
+            "gremlin-groovy" by default
+        :param str op: Gremlin Server op argument. "eval" by default.
+        :param str processor: Gremlin Server processor argument. "" by default.
+        :param float timeout: timeout for establishing connection (optional).
+            Values ``0`` or ``None`` mean no timeout
+        :param str session: Session id (optional). Typically a uuid
+        :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``
+            `asyncio.get_event_loop` is used for getting default event loop
+            (optional)
+        :returns: :py:class:`list` of
+            :py:class:`aiogremlin.subprotocol.Message`
         """
         lang = lang or self.lang
         op = op or self.op
@@ -170,6 +208,7 @@ class GremlinClientSession(GremlinClient):
 
     @property
     def session(self):
+        """Getter setter property for session id."""
         return self._session
 
     @session.setter
@@ -177,6 +216,14 @@ class GremlinClientSession(GremlinClient):
         self._session = value
 
     def reset_session(self, session=None):
+        """
+        Reset session id.
+
+        :param str session: A unique session id (optional). If None, an id will
+            be generated using :py:func:`uuid.uuid4`.
+
+        :returns: New session id.
+        """
         if session is None:
             session = str(uuid.uuid4())
         self._session = session
@@ -201,20 +248,29 @@ class GremlinResponse:
 
     @property
     def stream(self):
+        """Read-only property used to get data from the stream in chunks.
+
+        :returns: :py:class:`aiogremlin.client.ResponseStream`"""
         return self._stream
 
     @property
     def session(self):
+        """Session ID (if applicable)."""
         return self._session
 
     @asyncio.coroutine
     def get(self):
+        """
+        :ref:`coroutine<coroutine>` method.
+
+        Get all messages from the stream.
+
+        :returns: :py:class:`list` :py:class:`aiogremlin.subprotocol.Message`
+        """
         return (yield from self._run())
 
     @asyncio.coroutine
     def _run(self):
-        """
-        """
         results = []
         while True:
             message = yield from self._stream.read()
@@ -244,12 +300,18 @@ class GremlinResponseStream:
 
     @asyncio.coroutine
     def read(self):
-        """Read a message from the stream"""
+        """
+        :ref:`coroutine<coroutine>` method
+
+        Read a message from the stream.
+
+        :returns: :py:class:`aiogremlin.subprotocol.Message`
+        """
         if self._stream.at_eof():
             yield from self._ws.release()
             message = None
         else:
-            asyncio.async(self._ws.receive(), loop=self._loop)
+            asyncio.Task(self._ws.receive(), loop=self._loop)
             try:
                 message = yield from self._stream.read()
             except RequestError:
@@ -268,10 +330,15 @@ def submit(gremlin, *,
            timeout=None,
            session=None,
            loop=None):
-    """Submit a script to the Gremlin Server.
+    """
+    :ref:`coroutine<coroutine>`
 
+    Submit a script to the Gremlin Server.
+
+    :param str gremlin: The Gremlin script.
     :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
         by default
+    :param dict bindings: A mapping of bindings for Gremlin script.
     :param str lang: Language of scripts submitted to the server.
         "gremlin-groovy" by default
     :param str op: Gremlin Server op argument. "eval" by default.
@@ -282,6 +349,7 @@ def submit(gremlin, *,
     :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
         `asyncio.get_event_loop` is used for getting default event loop
         (optional)
+    :returns: :py:class:`aiogremlin.client.GremlinResponse` object
     """
 
     if loop is None:

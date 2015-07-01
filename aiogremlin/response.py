@@ -15,7 +15,9 @@ __all__ = ('GremlinClientWebSocketResponse',)
 
 
 class GremlinClientWebSocketResponse(ClientWebSocketResponse):
-
+    """Wraps :py:class:`aiohttp.websocket_client.ClientWebSocketResponse`
+    with minimal added functionality for the Gremln Server use case.
+    """
     def __init__(self, reader, writer, protocol, response, timeout, autoclose,
                  autoping, loop):
         ClientWebSocketResponse.__init__(self, reader, writer, protocol,
@@ -26,6 +28,11 @@ class GremlinClientWebSocketResponse(ClientWebSocketResponse):
 
     @property
     def parser(self):
+        """
+        Read-only property.
+
+        :returns: :py:class:`aiohttp.parsers.StreamParser`
+        """
         return self._parser
 
     @asyncio.coroutine
@@ -74,6 +81,7 @@ class GremlinClientWebSocketResponse(ClientWebSocketResponse):
             return True
 
     def send(self, message, *, binary=True):
+        """Send a message to the server."""
         if binary:
             method = self.send_bytes
         else:
@@ -89,6 +97,11 @@ class GremlinClientWebSocketResponse(ClientWebSocketResponse):
 
     @asyncio.coroutine
     def receive(self):
+        """
+        :ref:`coroutine<coroutine>` method
+
+        Receive a message from the server and push it into the parser.
+        """
         msg = yield from super().receive()
         if msg.tp == aiohttp.MsgType.binary:
             self.parser.feed_data(msg.data.decode())

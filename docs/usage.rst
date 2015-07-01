@@ -37,6 +37,8 @@ read the chunked responses one at a time::
                      lang="gremlin-groovy", op="eval", processor="",
                      timeout=None, session=None, loop=None):
 
+    :ref:`coroutine<coroutine>`
+
     Submit a script to the Gremlin Server.
 
     :param str gremlin: Gremlin script to submit to server.
@@ -129,7 +131,7 @@ point to different endpoints::
 
 .. method:: close()
 
-   :ref:`coroutine<coroutine>` method.
+   :ref:`coroutine<coroutine>` method
 
    Close client. If client has not been detached from underlying
    ws_connector, this coroutinemethod closes the latter as well.
@@ -140,6 +142,10 @@ point to different endpoints::
 
 .. method:: submit(gremlin, *, bindings=None, lang=None, op=None,
                    processor=None, binary=True, session=None, timeout=None)
+
+   :ref:`coroutine<coroutine>` method
+
+   Submit a script to the Gremlin Server.
 
    :param str gremlin: Gremlin script to submit to server.
 
@@ -165,6 +171,10 @@ point to different endpoints::
 .. method:: execute(gremlin, *, bindings=None, lang=None, op=None,
                    processor=None, binary=True, session=None, timeout=None)
 
+   :ref:`coroutine<coroutine>` method
+
+   Submit a script to the Gremlin Server and get a list of the responses.
+
    :param str gremlin: Gremlin script to submit to server.
 
    :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
@@ -184,10 +194,30 @@ point to different endpoints::
 
    :param str session: Session id (optional). Typically a uuid
 
-   :returns: :py:class:`list` of messages
+   :returns: :py:class:`list` of :py:class:`aiogremlin.subprotocol.Message`
 
 
 Using Gremlin Server sessions with :py:class:`GremlinClientSession`.
+--------------------------------------------------------------------
+
+The Gremlin Server supports sessions to maintain state across server
+messages. Although this is not the preffered method, it is quite useful in
+certain situations. For convenience, :py:mod:`aiogremlin` provides the class
+:py:class:`aiogremlin.client.GremlinClientSession`. It is basically the
+same as the :py:class:`GremlinClient`, but it uses sessions by default::
+
+    >>> client = aiogremlin.GremlinClientSession()
+    >>> client.session
+    '533f15fb-dc2e-4768-86c5-5b136b380b65'
+    >>> client.reset_session()
+    'd7bdb0da-d4ec-4609-8ac0-df9713803d43'
+
+That's basically it! For more info, see the
+:ref:`Client Reference Guide<aiogremlin-client-reference>`
+
+
+
+
 
 
 

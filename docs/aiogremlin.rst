@@ -22,6 +22,9 @@ aiogremlin.client module
 aiogremlin.connector module
 ---------------------------
 
+This module is based on :py:class:`aiohttp.client.ClientSession` and
+:py:class:`aiohttp.connector.BaseConnector`.
+
 .. automodule:: aiogremlin.connector
     :members:
     :undoc-members:
@@ -43,7 +46,6 @@ aiogremlin.response module
     :members:
     :undoc-members:
     :show-inheritance:
-    :inherited-members:
 
 aiogremlin.subprotocol module
 -----------------------------

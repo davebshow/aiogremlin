@@ -12,7 +12,7 @@ based on the `asyncio`_ and `aiohttp`_ libraries.
 
 Releases
 ========
-The latest release of ``aiogremlin`` is **0.0.11**.
+The latest release of :py:mod:`aiogremlin` is **0.0.11**.
 
 
 Requirements
@@ -68,11 +68,22 @@ Submit a script to the Gremlin Server::
     [Message(status_code=200, data=[2], message={}, metadata='')]
 
 
-The above example demonstrates how ``aiogremlin`` uses the
+The above example demonstrates how :py:mod:`aiogremlin` uses the
 :ref:`event loop<asyncio-event-loop>` to drive communication with the Gremlin
 Server, but the **rest of examples are written as if they were run in a Python
 interpreter**. In reality, **this isn't possible**, so remember, code *must*
 be wrapped in functions and run with the :ref:`event loop<asyncio-event-loop>`.
+
+Contribute
+----------
+
+Contributions are welcome. If you find a bug, or have a suggestion, please open
+an issue on `Github`_. If you would like to make a pull request, please make
+sure to add appropriate tests and run them::
+
+    $ python setup.py test
+
+In the future there will be CI and more info on contributing.
 
 Contents:
 
@@ -94,3 +105,4 @@ Indices and tables
 .. _`asyncio`: https://docs.python.org/3/library/asyncio.html
 .. _`aiohttp`: http://aiohttp.readthedocs.org/en/latest/
 .. _`ujson`: https://pypi.python.org/pypi/ujson
+.. _Github: https://github.com/davebshow/aiogremlin/issues
