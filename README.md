@@ -1,4 +1,4 @@
-# [aiogremlin 0.0.11](https://pypi.python.org/pypi/gizmo/0.1.12)
+# [aiogremlin 0.0.11](https://pypi.python.org/pypi/aiogremlin/0.0.11)
 
 ## [Official Documentation](http://aiogremlin.readthedocs.org/en/latest/)
 
