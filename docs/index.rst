@@ -12,7 +12,7 @@ based on the `asyncio`_ and `aiohttp`_ libraries.
 
 Releases
 ========
-The latest release of :py:mod:`aiogremlin` is **0.0.12**.
+The latest release of :py:mod:`aiogremlin` is **0.1.0**.
 
 
 Requirements

@@ -30,6 +30,25 @@ class SubmitTest(unittest.TestCase):
         results = self.loop.run_until_complete(go())
         self.assertEqual(results[0].data[0], 8)
 
+    def test_rebinding(self):
+        execute = submit("graph2.addVertex()", loop=self.loop)
+        try:
+            self.loop.run_until_complete(execute.get())
+            error = False
+        except:
+            error = True
+        self.assertTrue(error)
+
+        @asyncio.coroutine
+        def go():
+            result = yield from submit(
+                "graph2.addVertex()", rebindings={"graph2": "graph"},
+                loop=self.loop)
+            resp = yield from result.get()
+            self.assertEqual(len(resp), 1)
+
+        self.loop.run_until_complete(go())
+
 
 class GremlinClientTest(unittest.TestCase):
 

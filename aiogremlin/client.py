@@ -161,6 +161,8 @@ class GremlinClient:
         :param dict bindings: A mapping of bindings for Gremlin script.
         :param str lang: Language of scripts submitted to the server.
             "gremlin-groovy" by default
+        :param dict rebindings: Rebind ``Graph`` and ``TraversalSource``
+            objects to different variable names in the current request
         :param str op: Gremlin Server op argument. "eval" by default.
         :param str processor: Gremlin Server processor argument. "" by default.
         :param float timeout: timeout for establishing connection (optional).
@@ -329,6 +331,7 @@ def submit(gremlin, *,
            url='ws://localhost:8182/',
            bindings=None,
            lang="gremlin-groovy",
+           rebindings=None,
            op="eval",
            processor="",
            timeout=None,
@@ -345,6 +348,8 @@ def submit(gremlin, *,
     :param dict bindings: A mapping of bindings for Gremlin script.
     :param str lang: Language of scripts submitted to the server.
         "gremlin-groovy" by default
+    :param dict rebindings: Rebind ``Graph`` and ``TraversalSource``
+        objects to different variable names in the current request
     :param str op: Gremlin Server op argument. "eval" by default.
     :param str processor: Gremlin Server processor argument. "" by default.
     :param float timeout: timeout for establishing connection (optional).
@@ -370,8 +375,8 @@ def submit(gremlin, *,
 
     try:
         resp = yield from gremlin_client.submit(
-            gremlin, bindings=bindings, lang=lang, op=op, processor=processor,
-            session=session, timeout=timeout)
+            gremlin, bindings=bindings, lang=lang, rebindings=rebindings,
+            op=op, processor=processor, session=session, timeout=timeout)
 
         return resp
 
