@@ -79,7 +79,7 @@ ARGS.add_argument(
     help='message count (default: `%(default)s`)')
 ARGS.add_argument(
     '-c', '--concurrency', action="store",
-    nargs='?', type=int, default=8,
+    nargs='?', type=int, default=16,
     help='count of parallel requests (default: `%(default)s`)')
 ARGS.add_argument(
     '-p', '--poolsize', action="store",

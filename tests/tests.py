@@ -96,6 +96,24 @@ class GremlinClientTest(unittest.TestCase):
             error = True
         self.assertTrue(error)
 
+    def test_rebinding(self):
+        execute = self.gc.execute("graph2.addVertex()")
+        try:
+            self.loop.run_until_complete(execute)
+            error = False
+        except:
+            error = True
+        self.assertTrue(error)
+
+        @asyncio.coroutine
+        def go():
+            result = yield from self.gc.execute(
+                "graph2.addVertex()", rebindings={"graph2": "graph"})
+            self.assertEqual(len(result), 1)
+
+        self.loop.run_until_complete(go())
+
+
 
 class GremlinClientSessionTest(unittest.TestCase):
 

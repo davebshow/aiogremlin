@@ -46,16 +46,18 @@ class GremlinWriter:
     def __init__(self, ws):
         self.ws = ws
 
-    def write(self, gremlin, bindings=None, lang="gremlin-groovy", op="eval",
-              processor="", session=None, binary=True,
-              mime_type="application/json"):
-        message = self._prepare_message(
-            gremlin,
-            bindings=bindings,
-            lang=lang,
-            op=op,
-            processor=processor,
-            session=session)
+    def write(self, gremlin, bindings=None, lang="gremlin-groovy",
+              rebindings=None, op="eval", processor="", session=None,
+              binary=True, mime_type="application/json"):
+        if rebindings is None:
+            rebindings = {}
+        message = self._prepare_message(gremlin,
+                                        bindings,
+                                        lang,
+                                        rebindings,
+                                        op,
+                                        processor,
+                                        session)
         message = json.dumps(message)
         if binary:
             message = self._set_message_header(message, mime_type)
@@ -72,8 +74,8 @@ class GremlinWriter:
         return b"".join([mime_len, mime_type, bytes(message, "utf-8")])
 
     @staticmethod
-    def _prepare_message(gremlin, bindings=None, lang="gremlin-groovy",
-                         op="eval", processor="", session=None):
+    def _prepare_message(gremlin, bindings, lang, rebindings, op, processor,
+                         session):
         message = {
             "requestId": str(uuid.uuid4()),
             "op": op,
@@ -81,7 +83,8 @@ class GremlinWriter:
             "args": {
                 "gremlin": gremlin,
                 "bindings": bindings,
-                "language":  lang
+                "language":  lang,
+                "rebindings": rebindings
             }
         }
         if session is None:

@@ -104,7 +104,7 @@ class GremlinClient:
         self._connector = None
 
     @asyncio.coroutine
-    def submit(self, gremlin, *, bindings=None, lang=None,
+    def submit(self, gremlin, *, bindings=None, lang=None, rebindings=None,
                op=None, processor=None, binary=True, session=None,
                timeout=None):
         """
@@ -116,6 +116,8 @@ class GremlinClient:
         :param dict bindings: A mapping of bindings for Gremlin script.
         :param str lang: Language of scripts submitted to the server.
             "gremlin-groovy" by default
+        :param dict rebindings: Rebind ``Graph`` and ``TraversalSource``
+            objects to different variable names in the current request
         :param str op: Gremlin Server op argument. "eval" by default.
         :param str processor: Gremlin Server processor argument. "" by default.
         :param float timeout: timeout for establishing connection (optional).
@@ -139,15 +141,17 @@ class GremlinClient:
 
         writer = GremlinWriter(ws)
 
-        ws = writer.write(gremlin, bindings=bindings, lang=lang, op=op,
+        ws = writer.write(gremlin, bindings=bindings, lang=lang,
+                          rebindings=rebindings, op=op,
                           processor=processor, binary=binary,
                           session=session)
 
         return GremlinResponse(ws, session=session, loop=self._loop)
 
     @asyncio.coroutine
-    def execute(self, gremlin, *, bindings=None, lang=None, session=None,
-                op=None, processor=None, binary=True, timeout=None):
+    def execute(self, gremlin, *, bindings=None, lang=None, rebindings=None,
+                session=None, op=None, processor=None, binary=True,
+                timeout=None):
         """
         :ref:`coroutine<coroutine>` method.
 
@@ -172,9 +176,9 @@ class GremlinClient:
         op = op or self.op
         processor = processor or self.processor
         resp = yield from self.submit(gremlin, bindings=bindings, lang=lang,
-                                      op=op, processor=processor,
-                                      binary=binary, session=session,
-                                      timeout=timeout)
+                                      rebindings=rebindings, op=op,
+                                      processor=processor, binary=binary,
+                                      session=session, timeout=timeout)
 
         return (yield from resp.get())
 

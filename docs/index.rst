@@ -12,14 +12,14 @@ based on the `asyncio`_ and `aiohttp`_ libraries.
 
 Releases
 ========
-The latest release of :py:mod:`aiogremlin` is **0.0.11**.
+The latest release of :py:mod:`aiogremlin` is **0.0.12**.
 
 
 Requirements
 ============
 
 - Python 3.4
-- Tinkerpop 3 Gremlin Server 3.0.0.M9
+- Tinkerpop 3 Gremlin Server 3.0.0
 
 
 Dependencies
