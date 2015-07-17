@@ -21,7 +21,7 @@ Requirements
 - Python 3.4
 - Tinkerpop 3 Gremlin Server 3.0.0
 
-Still using Python 2? Checkout `gremlinrestclient`_.
+Using Python 2? Checkout `gremlinrestclient`_.
 
 Dependencies
 ============
