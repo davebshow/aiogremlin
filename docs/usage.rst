@@ -2,7 +2,7 @@ Using aiogremlin
 ================
 
 Before you get started, make sure you have the `Gremlin Server`_ up and running.
-All of the following example assume a running Gremlin Server version 3.0.0.M9 at
+All of the following example assume a running Gremlin Server version 3.0.0 at
 'ws://localhost:8182/'.
 
 
