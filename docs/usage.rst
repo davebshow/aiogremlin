@@ -34,8 +34,8 @@ read the chunked responses one at a time::
 
 
 .. function:: submit(gremlin, *, url='ws://localhost:8182/', bindings=None,
-                     lang="gremlin-groovy", op="eval", processor="",
-                     timeout=None, session=None, loop=None):
+                     lang="gremlin-groovy", rebindings=None, op="eval",
+                     processor="", timeout=None, session=None, loop=None):
 
     :ref:`coroutine<coroutine>`
 
@@ -50,6 +50,9 @@ read the chunked responses one at a time::
 
     :param str lang: Language of scripts submitted to the server.
         "gremlin-groovy" by default
+
+    :param dict rebindings: Rebind ``Graph`` and ``TraversalSource``
+        objects to different variable names in the current request
 
     :param str op: Gremlin Server op argument. "eval" by default.
 
@@ -140,8 +143,9 @@ point to different endpoints::
 
    Detach client from ws_connector. Client status is switched to closed.
 
-.. method:: submit(gremlin, *, bindings=None, lang=None, op=None,
-                   processor=None, binary=True, session=None, timeout=None)
+.. method:: submit(gremlin, *, bindings=None, lang=None, rebindings=None,
+                   op=None, processor=None, binary=True, session=None,
+                   timeout=None)
 
    :ref:`coroutine<coroutine>` method
 
@@ -157,6 +161,9 @@ point to different endpoints::
    :param str lang: Language of scripts submitted to the server.
                     "gremlin-groovy" by default
 
+   :param dict rebindings: Rebind ``Graph`` and ``TraversalSource``
+                           objects to different variable names in the current request
+
    :param str op: Gremlin Server op argument. "eval" by default.
 
    :param str processor: Gremlin Server processor argument. "" by default.
@@ -168,8 +175,9 @@ point to different endpoints::
 
    :returns: :py:class:`aiogremlin.client.GremlinResponse` object
 
-.. method:: execute(gremlin, *, bindings=None, lang=None, op=None,
-                   processor=None, binary=True, session=None, timeout=None)
+.. method:: execute(gremlin, *, bindings=None, lang=None, rebindings=None,
+                    op=None, processor=None, binary=True, session=None,
+                    timeout=None)
 
    :ref:`coroutine<coroutine>` method
 
@@ -184,6 +192,10 @@ point to different endpoints::
 
    :param str lang: Language of scripts submitted to the server.
                     "gremlin-groovy" by default
+
+   :param dict rebindings: Rebind ``Graph`` and ``TraversalSource``
+                           objects to different variable names in the current
+                           request
 
    :param str op: Gremlin Server op argument. "eval" by default.
 
