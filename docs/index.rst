@@ -21,6 +21,7 @@ Requirements
 - Python 3.4
 - Tinkerpop 3 Gremlin Server 3.0.0
 
+Still using Python 2? Checkout `gremlinrestclient`_.
 
 Dependencies
 ============
@@ -106,3 +107,4 @@ Indices and tables
 .. _`aiohttp`: http://aiohttp.readthedocs.org/en/latest/
 .. _`ujson`: https://pypi.python.org/pypi/ujson
 .. _Github: https://github.com/davebshow/aiogremlin/issues
+.. _`gremlinrestclient`: http://gremlinrestclient.readthedocs.org/en/latest/
