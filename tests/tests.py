@@ -18,17 +18,17 @@ class SubmitTest(unittest.TestCase):
     def tearDown(self):
         self.loop.close()
 
-    # def test_submit(self):
-    #
-    #     @asyncio.coroutine
-    #     def go():
-    #         resp = yield from submit("4 + 4", bindings={"x": 4},
-    #                                  loop=self.loop)
-    #         results = yield from resp.get()
-    #         return results
-    #
-    #     results = self.loop.run_until_complete(go())
-    #     self.assertEqual(results[0].data[0], 8)
+    def test_submit(self):
+
+        @asyncio.coroutine
+        def go():
+            resp = yield from submit("4 + 4", bindings={"x": 4},
+                                     loop=self.loop)
+            results = yield from resp.get()
+            return results
+
+        results = self.loop.run_until_complete(go())
+        self.assertEqual(results[0].data[0], 8)
 
     def test_rebinding(self):
 
