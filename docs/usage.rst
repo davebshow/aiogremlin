@@ -106,6 +106,12 @@ point to different endpoints::
     ...                                    ws_connector=connector)
 
 
+Remember, when you are done you must explicitly close the :py:class:`GremlinClient`
+using the coroutinemethod :py:meth:`close`::
+
+    >>> yield from client.close()
+
+
 .. class:: GremlinClient(self, *, url='ws://localhost:8182/', loop=None,
                          lang="gremlin-groovy", op="eval", processor="",
                          timeout=None, ws_connector=None)
