@@ -6,7 +6,7 @@ import uuid
 import aiohttp
 
 from aiogremlin.response import GremlinClientWebSocketResponse
-from aiogremlin.exceptions import RequestError
+from aiogremlin.exceptions import RequestError, GremlinServerError
 from aiogremlin.connector import GremlinConnector
 from aiogremlin.subprotocol import gremlin_response_parser, GremlinWriter
 
@@ -320,7 +320,7 @@ class GremlinResponseStream:
             asyncio.Task(self._ws.receive(), loop=self._loop)
             try:
                 message = yield from self._stream.read()
-            except RequestError:
+            except (RequestError, GremlinServerError):
                 yield from self._ws.release()
                 raise
         return message
