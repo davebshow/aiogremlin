@@ -4,4 +4,4 @@ from .exceptions import *
 from .connector import *
 from .subprotocol import *
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
