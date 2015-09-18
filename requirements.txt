@@ -1,4 +1,3 @@
-aiogremlin==0.0.11
 aiohttp==0.16.5
 aiowebsocketclient==0.0.3
 argparse==1.2.1

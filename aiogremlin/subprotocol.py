@@ -29,7 +29,7 @@ def gremlin_response_parser(out, buf):
         if message.status_code == 200:
             out.feed_data(message)
             out.feed_eof()
-        elif message.status_code == 206:
+        elif message.status_code == 206 or message.status_code == 407:
             out.feed_data(message)
         elif message.status_code == 204:
             out.feed_data(message)
@@ -46,22 +46,28 @@ class GremlinWriter:
     def __init__(self, ws):
         self.ws = ws
 
-    def write(self, gremlin, bindings=None, lang="gremlin-groovy",
+    def write(self, *, gremlin="", bindings=None, lang="gremlin-groovy",
               rebindings=None, op="eval", processor="", session=None,
-              binary=True, mime_type="application/json"):
+              binary=True, mime_type="application/json", username="",
+              password=""):
         if rebindings is None:
             rebindings = {}
-        message = self._prepare_message(gremlin,
-                                        bindings,
-                                        lang,
-                                        rebindings,
-                                        op,
-                                        processor,
-                                        session)
+        if op == "eval":
+            message = self._prepare_message(gremlin,
+                                            bindings,
+                                            lang,
+                                            rebindings,
+                                            op,
+                                            processor,
+                                            session)
+
+        if op == "authentication":
+            message = self._authenticate(username, password, session, processor)
         message = json.dumps(message)
         if binary:
             message = self._set_message_header(message, mime_type)
         self.ws.send(message, binary=binary)
+        print(message)
         return self.ws
 
     @staticmethod
@@ -85,6 +91,25 @@ class GremlinWriter:
                 "bindings": bindings,
                 "language":  lang,
                 "rebindings": rebindings
+            }
+        }
+        if session is None:
+            if processor == "session":
+                raise RuntimeError("session processor requires a session id")
+        else:
+            message["args"].update({"session": session})
+        return message
+
+    @staticmethod
+    def _authenticate(username, password, session, processor):
+        auth_bytes = "".join(["0", username, "0", password])
+        print(auth_bytes)
+        message = {
+            "requestId": str(uuid.uuid4()),
+            "op": "authentication",
+            "processor": processor,
+            "args": {
+                "sasl": auth_bytes
             }
         }
         if session is None:

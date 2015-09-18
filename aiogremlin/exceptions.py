@@ -10,6 +10,8 @@ class StatusException(IOError):
         """
         self.value = value
         self.response = {
+            401: ("UNAUTHORIZED", ("The request attempted to access resources " +
+                  "that the requesting user did not have access to")),
             498: ("MALFORMED_REQUEST",
                   ("The request message was not properly formatted which " +
                    "means it could not be parsed at all or the 'op' code " +

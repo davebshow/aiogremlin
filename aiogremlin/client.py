@@ -28,15 +28,14 @@ class GremlinClient:
     :param str processor: Gremlin Server processor argument. "" by default.
     :param float timeout: timeout for establishing connection (optional).
         Values ``0`` or ``None`` mean no timeout
-    :param connector: A class that implements the method ``ws_connect``.
+    :param ws_connector: A class that implements the method ``ws_connect``.
         Usually an instance of ``aiogremlin.connector.GremlinConnector``
     """
 
     def __init__(self, *, url='http://localhost:8182/', loop=None,
                  lang="gremlin-groovy", op="eval", processor="",
-                 timeout=None, ws_connector=None, connector=None):
-        """
-        """
+                 timeout=None, ws_connector=None, connector=None,
+                 username="", password=""):
         self._lang = lang
         self._op = op
         self._processor = processor
@@ -45,6 +44,8 @@ class GremlinClient:
         self._session = None
         self._url = url
         self._timeout = timeout
+        self._username = username
+        self._password = password
         if connector is None:
             connector = aiohttp.TCPConnector(verify_ssl=False, loop=self._loop)
             client_session = aiohttp.ClientSession(connector=connector,
@@ -146,12 +147,14 @@ class GremlinClient:
 
         writer = GremlinWriter(ws)
 
-        ws = writer.write(gremlin, bindings=bindings, lang=lang,
+        ws = writer.write(gremlin=gremlin, bindings=bindings, lang=lang,
                           rebindings=rebindings, op=op,
                           processor=processor, binary=binary,
                           session=session)
 
-        return GremlinResponse(ws, session=session, loop=self._loop)
+        return GremlinResponse(ws, username=self._username,
+                               password=self._password, session=session,
+                               loop=self._loop)
 
     @asyncio.coroutine
     def execute(self, gremlin, *, bindings=None, lang=None, rebindings=None,
@@ -252,10 +255,12 @@ class GremlinResponse:
         `asyncio.get_event_loop` is used for getting default event loop
         (optional)
     """
-    def __init__(self, ws, *, session=None, loop=None):
+    def __init__(self, ws, *, session=None, loop=None, username="",
+                 password=""):
         self._loop = loop or asyncio.get_event_loop()
         self._session = session
-        self._stream = GremlinResponseStream(ws, loop=self._loop)
+        self._stream = GremlinResponseStream(ws, username, password,
+                                             loop=self._loop)
 
     @property
     def stream(self):
@@ -282,6 +287,7 @@ class GremlinResponse:
 
     @asyncio.coroutine
     def _run(self):
+        import ipdb; ipdb.set_trace()
         results = []
         while True:
             message = yield from self._stream.read()
@@ -302,8 +308,10 @@ class GremlinResponseStream:
         `asyncio.get_event_loop` is used for getting default event loop
         (optional)
     """
-    def __init__(self, ws, loop=None):
+    def __init__(self, ws, username, password, loop=None):
         self._ws = ws
+        self._username = username
+        self._password = password
         self._loop = loop or asyncio.get_event_loop()
         data_stream = aiohttp.DataQueue(loop=self._loop)
         self._stream = self._ws.parser.set_parser(gremlin_response_parser,
@@ -325,6 +333,10 @@ class GremlinResponseStream:
             asyncio.Task(self._ws.receive(), loop=self._loop)
             try:
                 message = yield from self._stream.read()
+                if message.status_code == 407:
+                    writer = GremlinWriter(self._ws)
+                    writer.write(op="authentication", username=self._username,
+                                 password=self._password)
             except (RequestError, GremlinServerError):
                 yield from self._ws.release()
                 raise
@@ -341,7 +353,9 @@ def submit(gremlin, *,
            processor="",
            timeout=None,
            session=None,
-           loop=None):
+           loop=None,
+           username="",
+           password=""):
     """
     :ref:`coroutine<coroutine>`
 
@@ -377,7 +391,8 @@ def submit(gremlin, *,
         ws_response_class=GremlinClientWebSocketResponse)
 
     gremlin_client = GremlinClient(url=url, loop=loop,
-                                   ws_connector=client_session)
+                                   ws_connector=client_session,
+                                   username=username, password=password)
 
     try:
         resp = yield from gremlin_client.submit(
