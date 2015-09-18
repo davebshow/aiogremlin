@@ -17,7 +17,7 @@ __all__ = ("submit", "GremlinClient", "GremlinClientSession",
 class GremlinClient:
     """Main interface for interacting with the Gremlin Server.
 
-    :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
+    :param str url: url for Gremlin Server (optional). 'http://localhost:8182/'
         by default
     :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
         `asyncio.get_event_loop` is used for getting default event loop
@@ -32,9 +32,9 @@ class GremlinClient:
         Usually an instance of ``aiogremlin.connector.GremlinConnector``
     """
 
-    def __init__(self, *, url='ws://localhost:8182/', loop=None,
+    def __init__(self, *, url='http://localhost:8182/', loop=None,
                  lang="gremlin-groovy", op="eval", processor="",
-                 timeout=None, ws_connector=None):
+                 timeout=None, ws_connector=None, connector=None):
         """
         """
         self._lang = lang
@@ -45,8 +45,13 @@ class GremlinClient:
         self._session = None
         self._url = url
         self._timeout = timeout
+        if connector is None:
+            connector = aiohttp.TCPConnector(verify_ssl=False, loop=self._loop)
+            client_session = aiohttp.ClientSession(connector=connector,
+                                                   loop=self._loop)
         if ws_connector is None:
-            ws_connector = GremlinConnector(loop=self._loop)
+            ws_connector = GremlinConnector(loop=self._loop,
+                                            client_session=client_session)
         self._connector = ws_connector
 
     @property
@@ -188,7 +193,7 @@ class GremlinClient:
 class GremlinClientSession(GremlinClient):
     """Interface for interacting with the Gremlin Server using sessions.
 
-    :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
+    :param str url: url for Gremlin Server (optional). 'http://localhost:8182/'
         by default
     :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
         `asyncio.get_event_loop` is used for getting default event loop
@@ -201,7 +206,7 @@ class GremlinClientSession(GremlinClient):
         Values ``0`` or ``None`` mean no timeout
     """
 
-    def __init__(self, *, url='ws://localhost:8182/', loop=None,
+    def __init__(self, *, url='http://localhost:8182/', loop=None,
                  lang="gremlin-groovy", op="eval", processor="session",
                  session=None, timeout=None,
                  ws_connector=None):
@@ -328,7 +333,7 @@ class GremlinResponseStream:
 
 @asyncio.coroutine
 def submit(gremlin, *,
-           url='ws://localhost:8182/',
+           url='http://localhost:8182/',
            bindings=None,
            lang="gremlin-groovy",
            rebindings=None,
@@ -343,7 +348,7 @@ def submit(gremlin, *,
     Submit a script to the Gremlin Server.
 
     :param str gremlin: The Gremlin script.
-    :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
+    :param str url: url for Gremlin Server (optional). 'http://localhost:8182/'
         by default
     :param dict bindings: A mapping of bindings for Gremlin script.
     :param str lang: Language of scripts submitted to the server.
@@ -364,7 +369,8 @@ def submit(gremlin, *,
     if loop is None:
         loop = asyncio.get_event_loop()
 
-    connector = aiohttp.TCPConnector(force_close=True, loop=loop)
+    connector = aiohttp.TCPConnector(force_close=True, loop=loop,
+                                     verify_ssl=False)
 
     client_session = aiohttp.ClientSession(
         connector=connector, loop=loop,
