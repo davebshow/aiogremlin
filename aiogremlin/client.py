@@ -34,7 +34,7 @@ class GremlinClient:
 
     def __init__(self, *, url='http://localhost:8182/', loop=None,
                  lang="gremlin-groovy", op="eval", processor="",
-                 timeout=None, ws_connector=None, connector=None,
+                 timeout=None, ws_connector=None, client_session=None,
                  username="", password=""):
         self._lang = lang
         self._op = op
@@ -46,10 +46,6 @@ class GremlinClient:
         self._timeout = timeout
         self._username = username
         self._password = password
-        if connector is None:
-            connector = aiohttp.TCPConnector(verify_ssl=False, loop=self._loop)
-            client_session = aiohttp.ClientSession(connector=connector,
-                                                   loop=self._loop)
         if ws_connector is None:
             ws_connector = GremlinConnector(loop=self._loop,
                                             client_session=client_session)
@@ -211,10 +207,12 @@ class GremlinClientSession(GremlinClient):
 
     def __init__(self, *, url='http://localhost:8182/', loop=None,
                  lang="gremlin-groovy", op="eval", processor="session",
-                 session=None, timeout=None,
-                 ws_connector=None):
+                 session=None, timeout=None, client_session=None,
+                 ws_connector=None, username="", password=""):
         super().__init__(url=url, lang=lang, op=op, processor=processor,
-                         loop=loop, timeout=timeout, ws_connector=ws_connector)
+                         loop=loop, timeout=timeout, ws_connector=ws_connector,
+                         client_session=client_session, username=username,
+                         password=password)
 
         if session is None:
             session = str(uuid.uuid4())
@@ -287,7 +285,6 @@ class GremlinResponse:
 
     @asyncio.coroutine
     def _run(self):
-        import ipdb; ipdb.set_trace()
         results = []
         while True:
             message = yield from self._stream.read()
@@ -337,6 +334,8 @@ class GremlinResponseStream:
                     writer = GremlinWriter(self._ws)
                     writer.write(op="authentication", username=self._username,
                                  password=self._password)
+                    asyncio.Task(self._ws.receive(), loop=self._loop)
+                    message = yield from self._stream.read()
             except (RequestError, GremlinServerError):
                 yield from self._ws.release()
                 raise

@@ -1,5 +1,6 @@
 """Implements the Gremlin Server subprotocol."""
 
+import base64
 import collections
 import uuid
 
@@ -62,12 +63,13 @@ class GremlinWriter:
                                             session)
 
         if op == "authentication":
-            message = self._authenticate(username, password, session, processor)
+            message = self._authenticate(
+                username, password, session, processor)
         message = json.dumps(message)
         if binary:
             message = self._set_message_header(message, mime_type)
         self.ws.send(message, binary=binary)
-        print(message)
+        # print(message)
         return self.ws
 
     @staticmethod
@@ -100,16 +102,17 @@ class GremlinWriter:
             message["args"].update({"session": session})
         return message
 
+
     @staticmethod
     def _authenticate(username, password, session, processor):
-        auth_bytes = "".join(["0", username, "0", password])
-        print(auth_bytes)
+        auth = b"".join([b"\x00", bytes(username, "utf-8"), b"\x00", bytes(password, "utf-8")])
+        print("auth:",auth)
         message = {
             "requestId": str(uuid.uuid4()),
             "op": "authentication",
             "processor": processor,
             "args": {
-                "sasl": auth_bytes
+                "sasl": base64.b64encode(auth)
             }
         }
         if session is None:
