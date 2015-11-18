@@ -12,21 +12,21 @@ based on the `asyncio`_ and `aiohttp`_ libraries.
 
 Releases
 ========
-The latest release of :py:mod:`aiogremlin` is **0.1.1**.
+The latest release of :py:mod:`aiogremlin` is **0.1.2**.
 
 
 Requirements
 ============
 
 - Python 3.4
-- Tinkerpop 3 Gremlin Server 3.0.0
+- TinkerPop 3 Gremlin Server 3.1.0
 
 Using Python 2? Checkout `gremlinrestclient`_.
 
 Dependencies
 ============
-- aiohttp 0.16.5
-- aiowebsocketclient 0.0.3
+- aiohttp 0.18.4
+- aiowebsocketclient 0.0.4
 
 To speed up serialization, you can also install `ujson`_. If not available,
 aiogremlin will use the Python standard library :any:`json<json>` module.
