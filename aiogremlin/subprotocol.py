@@ -69,7 +69,6 @@ class GremlinWriter:
         if binary:
             message = self._set_message_header(message, mime_type)
         self.ws.send(message, binary=binary)
-        print(message)
         return self.ws
 
     @staticmethod
@@ -111,7 +110,7 @@ class GremlinWriter:
             "op": "authentication",
             "processor": processor,
             "args": {
-                "sasl": base64.b64encode(auth)
+                "sasl": base64.b64encode(auth).decode()
             }
         }
         if session is None:

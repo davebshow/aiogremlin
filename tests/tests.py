@@ -13,7 +13,6 @@ from aiogremlin import (submit, GremlinConnector, GremlinClient,
 class SubmitTest(unittest.TestCase):
 
     def setUp(self):
-        self.uri = 'http://localhost:8182/'
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
 
@@ -24,7 +23,7 @@ class SubmitTest(unittest.TestCase):
 
         @asyncio.coroutine
         def go():
-            resp = yield from submit("x + x", url=self.uri,
+            resp = yield from submit("x + x", url='http://localhost:8182/',
                                      bindings={"x": 4}, loop=self.loop,
                                      username="stephen", password="password")
             results = yield from resp.get()
@@ -37,7 +36,7 @@ class SubmitTest(unittest.TestCase):
         @asyncio.coroutine
         def go1():
             result = yield from submit("graph2.addVertex()",
-                                       url='https://localhost:8182/',
+                                       url='http://localhost:8182/',
                                        loop=self.loop, username="stephen",
                                        password="password")
             resp = yield from result.get()
@@ -52,7 +51,7 @@ class SubmitTest(unittest.TestCase):
         @asyncio.coroutine
         def go2():
             result = yield from submit(
-                "graph2.addVertex()", url=self.uri,
+                "graph2.addVertex()", url='http://localhost:8182/',
                 rebindings={"graph2": "graph"}, loop=self.loop,
                 username="stephen", password="password")
             resp = yield from result.get()
@@ -67,19 +66,10 @@ class SubmitTest(unittest.TestCase):
 class GremlinClientTest(unittest.TestCase):
 
     def setUp(self):
-        self.uri = 'http://localhost:8182/'
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        connector = aiohttp.TCPConnector(force_close=False, loop=self.loop,
-                                         verify_ssl=False)
 
-        client_session = aiohttp.ClientSession(
-            connector=connector, loop=self.loop,
-            ws_response_class=GremlinClientWebSocketResponse)
-
-        self.gc = GremlinClient(url=self.uri, loop=self.loop,
-                                username="stephen", password="password",
-                                client_session=client_session)
+        self.gc = GremlinClient(url="http://localhost:8182/", loop=self.loop)
 
     def tearDown(self):
         self.loop.run_until_complete(self.gc.close())
@@ -163,20 +153,10 @@ class GremlinClientTest(unittest.TestCase):
 class GremlinClientSessionTest(unittest.TestCase):
 
     def setUp(self):
-        self.uri = 'http://localhost:8182/'
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        connector = aiohttp.TCPConnector(force_close=False, loop=self.loop,
-                                         verify_ssl=False)
-
-        client_session = aiohttp.ClientSession(
-            connector=connector, loop=self.loop,
-            ws_response_class=GremlinClientWebSocketResponse)
-
-        self.gc = GremlinClientSession(url=self.uri,
-                                       loop=self.loop,
-                                       username="stephen", password="password",
-                                       client_session=client_session)
+        self.gc = GremlinClientSession(url="http://localhost:8182/",
+                                       loop=self.loop)
 
         self.script1 = """v=graph.addVertex('name', 'Dave')"""
 
