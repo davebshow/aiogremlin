@@ -13,6 +13,7 @@ from aiogremlin import (submit, GremlinConnector, GremlinClient,
 class SubmitTest(unittest.TestCase):
 
     def setUp(self):
+        self.uri = 'http://localhost:8182/'
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
 
@@ -23,7 +24,7 @@ class SubmitTest(unittest.TestCase):
 
         @asyncio.coroutine
         def go():
-            resp = yield from submit("x + x", url='https://localhost:8182/',
+            resp = yield from submit("x + x", url=self.uri,
                                      bindings={"x": 4}, loop=self.loop,
                                      username="stephen", password="password")
             results = yield from resp.get()
@@ -51,7 +52,7 @@ class SubmitTest(unittest.TestCase):
         @asyncio.coroutine
         def go2():
             result = yield from submit(
-                "graph2.addVertex()", url='https://localhost:8182/',
+                "graph2.addVertex()", url=self.uri,
                 rebindings={"graph2": "graph"}, loop=self.loop,
                 username="stephen", password="password")
             resp = yield from result.get()
@@ -66,6 +67,7 @@ class SubmitTest(unittest.TestCase):
 class GremlinClientTest(unittest.TestCase):
 
     def setUp(self):
+        self.uri = 'http://localhost:8182/'
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
         connector = aiohttp.TCPConnector(force_close=False, loop=self.loop,
@@ -75,7 +77,7 @@ class GremlinClientTest(unittest.TestCase):
             connector=connector, loop=self.loop,
             ws_response_class=GremlinClientWebSocketResponse)
 
-        self.gc = GremlinClient(url="https://localhost:8182/", loop=self.loop,
+        self.gc = GremlinClient(url=self.uri, loop=self.loop,
                                 username="stephen", password="password",
                                 client_session=client_session)
 
@@ -161,6 +163,7 @@ class GremlinClientTest(unittest.TestCase):
 class GremlinClientSessionTest(unittest.TestCase):
 
     def setUp(self):
+        self.uri = 'http://localhost:8182/'
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
         connector = aiohttp.TCPConnector(force_close=False, loop=self.loop,
@@ -170,7 +173,7 @@ class GremlinClientSessionTest(unittest.TestCase):
             connector=connector, loop=self.loop,
             ws_response_class=GremlinClientWebSocketResponse)
 
-        self.gc = GremlinClientSession(url="https://localhost:8182/",
+        self.gc = GremlinClientSession(url=self.uri,
                                        loop=self.loop,
                                        username="stephen", password="password",
                                        client_session=client_session)
@@ -194,71 +197,71 @@ class GremlinClientSessionTest(unittest.TestCase):
         results = self.loop.run_until_complete(go())
         self.assertEqual(results[0].data[0]['value'], 'Dave')
 
-    # def test_session_reset(self):
-    #
-    #     @asyncio.coroutine
-    #     def go():
-    #         yield from self.gc.execute(self.script1)
-    #         self.gc.reset_session()
-    #         results = yield from self.gc.execute(self.script2)
-    #         return results
-    #     try:
-    #         results = self.loop.run_until_complete(go())
-    #         error = False
-    #     except GremlinServerError:
-    #         error = True
-    #     self.assertTrue(error)
-    #
-    # def test_session_manual_reset(self):
-    #
-    #     @asyncio.coroutine
-    #     def go():
-    #         yield from self.gc.execute(self.script1)
-    #         new_sess = str(uuid.uuid4())
-    #         sess = self.gc.reset_session(session=new_sess)
-    #         self.assertEqual(sess, new_sess)
-    #         self.assertEqual(self.gc.session, new_sess)
-    #         results = yield from self.gc.execute(self.script2)
-    #         return results
-    #     try:
-    #         results = self.loop.run_until_complete(go())
-    #         error = False
-    #     except GremlinServerError:
-    #         error = True
-    #     self.assertTrue(error)
-    #
-    # def test_session_set(self):
-    #
-    #     @asyncio.coroutine
-    #     def go():
-    #         yield from self.gc.execute(self.script1)
-    #         new_sess = str(uuid.uuid4())
-    #         self.gc.session = new_sess
-    #         self.assertEqual(self.gc.session, new_sess)
-    #         results = yield from self.gc.execute(self.script2)
-    #         return results
-    #     try:
-    #         results = self.loop.run_until_complete(go())
-    #         error = False
-    #     except GremlinServerError:
-    #         error = True
-    #     self.assertTrue(error)
-    #
-    # def test_resp_session(self):
-    #
-    #     @asyncio.coroutine
-    #     def go():
-    #         session = str(uuid.uuid4())
-    #         self.gc.session = session
-    #         resp = yield from self.gc.submit("x + x", bindings={"x": 4})
-    #         while True:
-    #             f = yield from resp.stream.read()
-    #             if f is None:
-    #                 break
-    #         self.assertEqual(resp.session, session)
-    #
-    #     self.loop.run_until_complete(go())
-    #
+    def test_session_reset(self):
+
+        @asyncio.coroutine
+        def go():
+            yield from self.gc.execute(self.script1)
+            self.gc.reset_session()
+            results = yield from self.gc.execute(self.script2)
+            return results
+        try:
+            results = self.loop.run_until_complete(go())
+            error = False
+        except GremlinServerError:
+            error = True
+        self.assertTrue(error)
+
+    def test_session_manual_reset(self):
+
+        @asyncio.coroutine
+        def go():
+            yield from self.gc.execute(self.script1)
+            new_sess = str(uuid.uuid4())
+            sess = self.gc.reset_session(session=new_sess)
+            self.assertEqual(sess, new_sess)
+            self.assertEqual(self.gc.session, new_sess)
+            results = yield from self.gc.execute(self.script2)
+            return results
+        try:
+            results = self.loop.run_until_complete(go())
+            error = False
+        except GremlinServerError:
+            error = True
+        self.assertTrue(error)
+
+    def test_session_set(self):
+
+        @asyncio.coroutine
+        def go():
+            yield from self.gc.execute(self.script1)
+            new_sess = str(uuid.uuid4())
+            self.gc.session = new_sess
+            self.assertEqual(self.gc.session, new_sess)
+            results = yield from self.gc.execute(self.script2)
+            return results
+        try:
+            results = self.loop.run_until_complete(go())
+            error = False
+        except GremlinServerError:
+            error = True
+        self.assertTrue(error)
+
+    def test_resp_session(self):
+
+        @asyncio.coroutine
+        def go():
+            session = str(uuid.uuid4())
+            self.gc.session = session
+            resp = yield from self.gc.submit("x + x", bindings={"x": 4})
+            while True:
+                f = yield from resp.stream.read()
+                if f is None:
+                    break
+            self.assertEqual(resp.session, session)
+
+        self.loop.run_until_complete(go())
+
 
 if __name__ == "__main__":
     unittest.main()
