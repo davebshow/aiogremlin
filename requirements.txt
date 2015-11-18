@@ -1,6 +1,2 @@
-aiohttp==0.16.5
-aiowebsocketclient==0.0.3
-argparse==1.2.1
-asyncio==3.4.3
-chardet==2.3.0
-wsgiref==0.1.2
+aiohttp==0.18.4
+aiowebsocketclient==0.0.4
