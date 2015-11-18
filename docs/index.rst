@@ -7,7 +7,7 @@
 aiogremlin
 ==========
 
-:py:mod:`aiogremlin` is an asynchronous client for the `Tinkerpop 3 Gremlin Server`_
+:py:mod:`aiogremlin` is an asynchronous client for the `TinkerPop 3 Gremlin Server`_
 based on the `asyncio`_ and `aiohttp`_ libraries.
 
 Releases
