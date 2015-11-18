@@ -25,8 +25,8 @@ def gremlin_response_parser(out, buf):
         message = json.loads(message)
         message = Message(message["status"]["code"],
                           message["result"]["data"],
-                          message["result"]["meta"],
-                          message["status"]["message"])
+                          message["status"]["message"],
+                          message["result"]["meta"])
         if message.status_code == 200:
             out.feed_data(message)
             out.feed_eof()
@@ -69,7 +69,7 @@ class GremlinWriter:
         if binary:
             message = self._set_message_header(message, mime_type)
         self.ws.send(message, binary=binary)
-        # print(message)
+        print(message)
         return self.ws
 
     @staticmethod
@@ -106,7 +106,6 @@ class GremlinWriter:
     @staticmethod
     def _authenticate(username, password, session, processor):
         auth = b"".join([b"\x00", bytes(username, "utf-8"), b"\x00", bytes(password, "utf-8")])
-        print("auth:",auth)
         message = {
             "requestId": str(uuid.uuid4()),
             "op": "authentication",
