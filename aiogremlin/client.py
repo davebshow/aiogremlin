@@ -30,6 +30,8 @@ class GremlinClient:
         Values ``0`` or ``None`` mean no timeout
     :param ws_connector: A class that implements the method ``ws_connect``.
         Usually an instance of ``aiogremlin.connector.GremlinConnector``
+    :param username: Username for SASL auth
+    :param password: Password for SASL auth
     """
 
     def __init__(self, *, url='http://localhost:8182/', loop=None,
@@ -376,6 +378,8 @@ def submit(gremlin, *,
     :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
         `asyncio.get_event_loop` is used for getting default event loop
         (optional)
+    :param username: Username for SASL auth
+    :param password: Password for SASL auth
     :returns: :py:class:`aiogremlin.client.GremlinResponse` object
     """
 

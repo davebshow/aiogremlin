@@ -67,6 +67,10 @@ read the chunked responses one at a time::
         `asyncio.get_event_loop` is used for getting default event loop
         (optional)
 
+    :param username: Username for SASL auth
+    
+    :param password: Password for SASL auth
+
     :returns: :py:class:`aiogremlin.client.GremlinResponse` object
 
 
