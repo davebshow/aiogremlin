@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="aiogremlin",
-    version="0.1.2",
+    version="0.1.3",
     url="",
     license="MIT",
     author="davebshow",
@@ -13,7 +13,7 @@ setup(
     packages=["aiogremlin", "tests"],
     install_requires=[
         "aiohttp==0.18.4",
-        "aiowebsocketclient==0.0.4"
+        "aiowebsocketclient==0.0.5"
     ],
     test_suite="tests",
     classifiers=[

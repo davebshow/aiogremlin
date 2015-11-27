@@ -13,8 +13,8 @@ class GremlinConnector(WebSocketConnector):
     """Create and manage reusable websocket connections. Out of the box
     support for multiple enpoints (databases).
 
-    :param float conn_timeout: timeout for establishing connection (optional).
-        Values ``0`` or ``None`` mean no timeout
+    :param float conn_timeout: timeout for establishing connection (seconds)
+        (optional). Values ``0`` or ``None`` mean no timeout
     :param bool force_close: close websockets after release
     :param int limit: limit for total open websocket connections
     :param aiohttp.client.ClientSession client_session: Underlying HTTP

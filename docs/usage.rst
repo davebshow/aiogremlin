@@ -58,7 +58,7 @@ read the chunked responses one at a time::
 
     :param str processor: Gremlin Server processor argument. "" by default.
 
-    :param float timeout: timeout for establishing connection (optional).
+    :param float timeout: timeout for websocket read (seconds)(optional).
         Values ``0`` or ``None`` mean no timeout
 
     :param str session: Session id (optional). Typically a uuid
@@ -67,8 +67,11 @@ read the chunked responses one at a time::
         `asyncio.get_event_loop` is used for getting default event loop
         (optional)
 
+    :param float conn_timeout: timeout for establishing connection (seconds)
+        (optional). Values ``0`` or ``None`` mean no timeout
+
     :param username: Username for SASL auth
-    
+
     :param password: Password for SASL auth
 
     :returns: :py:class:`aiogremlin.client.GremlinResponse` object

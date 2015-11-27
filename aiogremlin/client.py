@@ -26,10 +26,12 @@ class GremlinClient:
         "gremlin-groovy" by default
     :param str op: Gremlin Server op argument. "eval" by default.
     :param str processor: Gremlin Server processor argument. "" by default.
-    :param float timeout: timeout for establishing connection (optional).
+    :param float timeout: timeout for websocket read (seconds)(optional).
         Values ``0`` or ``None`` mean no timeout
     :param ws_connector: A class that implements the method ``ws_connect``.
         Usually an instance of ``aiogremlin.connector.GremlinConnector``
+    :param float conn_timeout: timeout for establishing connection (seconds)
+        (optional). Values ``0`` or ``None`` mean no timeout
     :param username: Username for SASL auth
     :param password: Password for SASL auth
     """
@@ -37,7 +39,7 @@ class GremlinClient:
     def __init__(self, *, url='http://localhost:8182/', loop=None,
                  lang="gremlin-groovy", op="eval", processor="",
                  timeout=None, ws_connector=None, client_session=None,
-                 username="", password=""):
+                 conn_timeout=None, username="", password=""):
         self._lang = lang
         self._op = op
         self._processor = processor
@@ -50,7 +52,8 @@ class GremlinClient:
         self._password = password
         if ws_connector is None:
             ws_connector = GremlinConnector(loop=self._loop,
-                                            client_session=client_session)
+                                            client_session=client_session,
+                                            conn_timeout=conn_timeout)
         self._connector = ws_connector
 
     @property
@@ -355,6 +358,7 @@ def submit(gremlin, *,
            timeout=None,
            session=None,
            loop=None,
+           conn_timeout=None,
            username="",
            password=""):
     """
@@ -378,6 +382,8 @@ def submit(gremlin, *,
     :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
         `asyncio.get_event_loop` is used for getting default event loop
         (optional)
+    :param float conn_timeout: timeout for establishing connection (seconds)
+        (optional). Values ``0`` or ``None`` mean no timeout
     :param username: Username for SASL auth
     :param password: Password for SASL auth
     :returns: :py:class:`aiogremlin.client.GremlinResponse` object
@@ -387,7 +393,8 @@ def submit(gremlin, *,
         loop = asyncio.get_event_loop()
 
     connector = aiohttp.TCPConnector(force_close=True, loop=loop,
-                                     verify_ssl=False)
+                                     verify_ssl=False,
+                                     conn_timeout=conn_timeout)
 
     client_session = aiohttp.ClientSession(
         connector=connector, loop=loop,
