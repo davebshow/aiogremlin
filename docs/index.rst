@@ -7,6 +7,7 @@
 aiogremlin
 ==========
 
+aiogremlin is no longer maintained!!! Please use Goblin: http://goblin.readthedocs.io/en/latest/index.html
 :py:mod:`aiogremlin` is an asynchronous client for the `TinkerPop 3 Gremlin Server`_
 based on the `asyncio`_ and `aiohttp`_ libraries.
 

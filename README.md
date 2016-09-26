@@ -1,3 +1,6 @@
+# aiogremin is no longer maintained. Please use Goblin: https://github.com/ZEROFAIL/goblin
+
+
 # [aiogremlin 0.1.3](https://pypi.python.org/pypi/aiogremlin/0.0.11)
 
 ## [Official Documentation](http://aiogremlin.readthedocs.org/en/latest/)
