@@ -4,7 +4,7 @@
 
 `aiogremlin` is a port of the official `Gremlin-Python` designed for integration with
 event loop based asynchronous Python networking libraries, including `asyncio`,
-`aiohttp`, `tornado`, and `curio`. It uses the `async/await` syntax introduced
+`aiohttp`, and `tornado`. It uses the `async/await` syntax introduced
 in PEP 492, and is therefore Python 3.5+ only.
 
 `aiogremlin` tries to follow `Gremlin-Python` as closely as possible both in terms
@@ -29,6 +29,7 @@ async def go(loop):
     'ws://localhost:8182/gremlin', 'g')
   g = Graph().traversal().withRemote(remote_connection)
   vertices = await g.V().toList()
+  await remote_connection.close()
   return vertices
 
 
