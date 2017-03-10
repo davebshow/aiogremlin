@@ -18,6 +18,7 @@ class RemoteTraversalSideEffects(traversal.TraversalSideEffects):
         return await self.get(key)
 
     async def keys(self):
+        """Get side effect keys associated with Traversal"""
         if not self._closed:
             message = request.RequestMessage(
                 'traversal', 'keys',
@@ -29,6 +30,7 @@ class RemoteTraversalSideEffects(traversal.TraversalSideEffects):
         return self._keys
 
     async def get(self, key):
+        """Get side effects associated with a specific key"""
         if not self._side_effects.get(key):
             if not self._closed:
                 results = await self._get(key)
@@ -47,6 +49,7 @@ class RemoteTraversalSideEffects(traversal.TraversalSideEffects):
         return await self._aggregate_results(result_set)
 
     async def close(self):
+        """Release side effects"""
         if not self._closed:
             message = request.RequestMessage(
                 'traversal', 'close',

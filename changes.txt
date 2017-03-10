@@ -1,9 +1,0 @@
-0.0.1 - 4/2015: Birth!
-0.0.2 - 5/1/2015: Added an init_pool method and a create_client constructor.
-0.0.3 - 5/2/2015: Using ujson for serialization.
-0.0.4 - 5/12/2015: Added support for sessions.
-0.0.5 - 5/13/2015: Using EofStream terminator technique to prepare for 3.0.0.M9
-0.0.7 - 5/20/2015: Full integration with aiohttp. Added Session object for HTTP
-                   connection pooling. Added a context manager.
-0.0.8 - 5/20/2015: Fixed bug in client constructor logic. Tested different client
-                   connection handling techniques.

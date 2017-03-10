@@ -3,9 +3,9 @@ from setuptools import setup
 
 setup(
     name='aiogremlin',
-    version='3.2.4',
+    version='3.2.4-rc.1',
     url='',
-    license='MIT',
+    license='Apache',
     author='davebshow',
     author_email='davebshow@gmail.com',
     description='Async Gremlin-Python',
@@ -24,13 +24,13 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=['pytest-asyncio', 'pytest', 'mock'],
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3 :: Only'
     ]
 )

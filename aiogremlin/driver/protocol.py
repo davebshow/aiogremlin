@@ -24,7 +24,7 @@ Message = collections.namedtuple(
 
 
 class GremlinServerWSProtocol(protocol.AbstractBaseProtocol):
-
+    """Implemenation of the Gremlin Server Websocket protocol"""
     def __init__(self, message_serializer, username='', password=''):
         if isinstance(message_serializer, type):
             message_serializer = message_serializer()

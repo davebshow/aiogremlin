@@ -23,7 +23,11 @@ class ConfigurationError(Exception):
 
 
 class GremlinServerError(Exception):
-    pass
+
+    def __init__(self, status_code, msg):
+        super().__init__(msg)
+        self.status_code = status_code
+        self.msg = msg
 
 
 class ResponseTimeoutError(Exception):

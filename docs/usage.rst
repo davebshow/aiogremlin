@@ -1,252 +1,200 @@
-Using aiogremlin
-================
+Using :py:mod:`aiogremlin`
+==========================
 
-Before you get started, make sure you have the `Gremlin Server`_ up and running.
-All of the following example assume a running Gremlin Server version 3.0.0 at
-'ws://localhost:8182/'.
+Before you get started, make sure you have the Gremlin Server up and running.
+All of the following example assume a running Gremlin Server version 3.2.4 at
+`ws://localhost:8182/gremlin` using the `conf/gremlin-server-modern-py.yaml`
+configuration::
 
+    $ ./bin/gremlin-server.sh conf/gremlin-server-modern-py.yaml
 
-Submitting a script with :py:func:`submit`
-------------------------------------------
 
+Using the Gremlin Language Variant
+----------------------------------
 
-The simplest way to interact with the Gremlin Server is by using the
-:py:func:`aiogremlin.client.submit` function::
+:py:mod:`aiogremlin` is used almost exactly like the official Gremlin-Python,
+except that all operations are asynchronous. Thus when coding with :py:mod:`aiogremlin`
+coroutines and the `async/await` syntax are used in combination with an `asyncio` compatible
+event loop implementation (`tornado`, `ZeroMQ`, `uvloop`, etc.).
 
-    >>> resp = yield from aiogremlin.submit("x + x", bindings={"x": 2})
+The following examples assume that you are already familiar with `asyncio`, coroutines,
+and the event loop. For readability, they strip away these details
+to focus on the syntax used by :py:mod:`aiogremlin`.
 
-This returns an instance of :py:class:`aiogremlin.client.GremlinResponse`. This
-class provides the interface used to read the underlying response stream. The
-easiest way to read the stream is using the
-:py:meth:`aiogremlin.client.GremlinResponse.get`::
+To create a traversal source, simply use
+:py:class:`DriverRemoteConnection<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection>`
+combined with :py:class:`Graph<aiogremlin.gremlin_python.structure.graph.Graph>`::
 
-    >>> results = yield from resp.get()
+    >>> remote_connection = await DriverRemoteConnection.open(
+    ...    'ws://localhost:8182/gremlin', 'g')
+    >>>  g = Graph().traversal().withRemote(remote_connection)
 
-However, if you are expecting a huge result set from the server, you may want to
-read the chunked responses one at a time::
+In :py:mod:`aiogremlin`, a
+:py:class:`Traversal<aiogremlin.gremlin_python.process.traversal.Traversal>`
+implements the Asynchronous Iterator Protocol as defined
+by PEP 492::
 
-    >>> results = []
-    >>> while True:
-    ...     msg = yield from resp.stream.read():
-    ...     if msg is None:
-    ...         break
-    ...     results.append(msg)
+    >>> async for vertex in g.V():
+    ...     print(vertex)
 
+Furthermore, it implements several convience methods - :py:meth:`toList`,
+:py:meth:`toSet`, and :py:meth:`next`::
 
-.. function:: submit(gremlin, *, url='ws://localhost:8182/', bindings=None,
-                     lang="gremlin-groovy", rebindings=None, op="eval",
-                     processor="", timeout=None, session=None, loop=None):
+    >>> vertex_list = await g.V().toList()
+    >>> vertex_set = await g.V().toSet()
+    >>> next_vertex = await g.V().next() # returns next result from the stream
 
-    :ref:`coroutine<coroutine>`
+:py:class:`Traversal<aiogremlin.gremlin_python.process.traversal.Traversal>`
+also contains a reference to a
+:py:class:`RemoteTraversalSideEffects<aiogremlin.remote.driver_remote_side_effects.RemoteTraversalSideEffects>`
+object that can be used to fetch side effects cached by the server (when applicable)::
 
-    Submit a script to the Gremlin Server.
+    >>> t = g.V().aggregate('a')
+    >>> await t.iterate()  # evaluate the traversal
+    >>> keys = await t.side_effects.keys()
+    >>> se = await t.side_effects.get('a')
+    >>> await t.side_effects.close()
 
-    :param str gremlin: Gremlin script to submit to server.
+Don't forget to close the
+:py:class:`DriverRemoteConnection<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection>`
+when finished::
 
-    :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
-        by default
+    >>> await remote_connection.close()
 
-    :param dict bindings: A mapping of bindings for Gremlin script.
 
-    :param str lang: Language of scripts submitted to the server.
-        "gremlin-groovy" by default
+Using :py:class:`DriverRemoteConnection<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection>`
+-----------------------------------------------------------------------------------------------------------
 
-    :param dict rebindings: Rebind ``Graph`` and ``TraversalSource``
-        objects to different variable names in the current request
+The
+:py:class:`DriverRemoteConnection<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection>`
+object allows you to configure you database connection in one of two ways:
 
-    :param str op: Gremlin Server op argument. "eval" by default.
-
-    :param str processor: Gremlin Server processor argument. "" by default.
-
-    :param float timeout: timeout for websocket read (seconds)(optional).
-        Values ``0`` or ``None`` mean no timeout
-
-    :param str session: Session id (optional). Typically a uuid
-
-    :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
-        `asyncio.get_event_loop` is used for getting default event loop
-        (optional)
-
-    :param float conn_timeout: timeout for establishing connection (seconds)
-        (optional). Values ``0`` or ``None`` mean no timeout
-
-    :param username: Username for SASL auth
-
-    :param password: Password for SASL auth
-
-    :returns: :py:class:`aiogremlin.client.GremlinResponse` object
-
-
-Reusing sockets with :py:class:`GremlinClient`
-----------------------------------------------
-
-To avoid the overhead of repeatedly establishing websocket connections,
-``aiogremlin`` provides the class :py:class:`aiogremlin.client.GremlinClient`.
-This class uses pooling to reuse websocket connections, and facilitates
-concurrent message passing by yielding new websocket connections as needed::
-
-    >>> client = aiogremlin.GremlinClient()
-    >>> resp = client.submit("x + x", bindings={"x": 2})
-
-For convenience, :py:class:`GremlinClient` provides the method
-:py:meth:`aiogremlin.client.GremlinClient.execute`. This is equivalent of calling,
-:py:meth:`GremlinClient.submit` and then :py:meth:`GremlinResponse.get`.
-Therefore::
-
-    >>> results = client.execute("x + x", bindings={"x": 2})
-
-Is equivalent to::
-
-    >>> resp = yield from aiogremlin.submit("x + x", bindings={"x": 2})
-    >>> results = yield from resp.get()
-
-:py:class:`GremlinClient` encapsulates :py:class:`aiogremlin.connector.GremlinConnector`.
-This class produces the websocket connections used by the client, and handles all
-of the connection pooling. It can also handle pools for multiple servers. To do
-so, you can share a :py:class:`GremlinConnector` amongst various client that
-point to different endpoints::
-
-    >>> connector = aiogremlin.GremlinConnector()
-    >>> client1 = aiogremlin.GremlinClient(url=url='ws://localhost:8182/'
-    ...                                    ws_connector=connector)
-    >>> client2 = aiogremlin.GremlinClient(url=url='ws://localhost:8080/'
-    ...                                    ws_connector=connector)
-
-
-Remember, when you are done you must explicitly close the :py:class:`GremlinClient`
-using the coroutinemethod :py:meth:`close`::
-
-    >>> yield from client.close()
-
-
-.. class:: GremlinClient(self, *, url='ws://localhost:8182/', loop=None,
-                         lang="gremlin-groovy", op="eval", processor="",
-                         timeout=None, ws_connector=None)
-
-    Main interface for interacting with the Gremlin Server.
-
-    :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
-        by default
-
-    :param loop: :ref:`event loop<asyncio-event-loop>` If param is ``None``,
-        `asyncio.get_event_loop` is used for getting default event loop
-        (optional)
-
-    :param str lang: Language of scripts submitted to the server.
-        "gremlin-groovy" by default
-
-    :param str op: Gremlin Server op argument. "eval" by default
-
-    :param str processor: Gremlin Server processor argument. "" by default
-
-    :param float timeout: timeout for establishing connection (optional).
-        Values ``0`` or ``None`` mean no timeout
-
-    :param ws_connector: A class that implements the method :py:meth:`ws_connect`.
-        Usually an instance of :py:class:`aiogremlin.connector.GremlinConnector`
-
-.. method:: close()
-
-   :ref:`coroutine<coroutine>` method
-
-   Close client. If client has not been detached from underlying
-   ws_connector, this coroutinemethod closes the latter as well.
-
-.. method:: detach()
-
-   Detach client from ws_connector. Client status is switched to closed.
-
-.. method:: submit(gremlin, *, bindings=None, lang=None, rebindings=None,
-                   op=None, processor=None, binary=True, session=None,
-                   timeout=None)
-
-   :ref:`coroutine<coroutine>` method
-
-   Submit a script to the Gremlin Server.
-
-   :param str gremlin: Gremlin script to submit to server.
-
-   :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
-                   by default
-
-   :param dict bindings: A mapping of bindings for Gremlin script.
-
-   :param str lang: Language of scripts submitted to the server.
-                    "gremlin-groovy" by default
-
-   :param dict rebindings: Rebind ``Graph`` and ``TraversalSource``
-                           objects to different variable names in the current request
-
-   :param str op: Gremlin Server op argument. "eval" by default.
-
-   :param str processor: Gremlin Server processor argument. "" by default.
-
-   :param float timeout: timeout for establishing connection (optional).
-                         Values ``0`` or ``None`` mean no timeout
-
-   :param str session: Session id (optional). Typically a uuid
-
-   :returns: :py:class:`aiogremlin.client.GremlinResponse` object
-
-.. method:: execute(gremlin, *, bindings=None, lang=None, rebindings=None,
-                    op=None, processor=None, binary=True, session=None,
-                    timeout=None)
-
-   :ref:`coroutine<coroutine>` method
-
-   Submit a script to the Gremlin Server and get a list of the responses.
-
-   :param str gremlin: Gremlin script to submit to server.
-
-   :param str url: url for Gremlin Server (optional). 'ws://localhost:8182/'
-                   by default
-
-   :param dict bindings: A mapping of bindings for Gremlin script.
-
-   :param str lang: Language of scripts submitted to the server.
-                    "gremlin-groovy" by default
-
-   :param dict rebindings: Rebind ``Graph`` and ``TraversalSource``
-                           objects to different variable names in the current
-                           request
-
-   :param str op: Gremlin Server op argument. "eval" by default.
-
-   :param str processor: Gremlin Server processor argument. "" by default.
-
-   :param float timeout: timeout for establishing connection (optional).
-                         Values ``0`` or ``None`` mean no timeout
-
-   :param str session: Session id (optional). Typically a uuid
-
-   :returns: :py:class:`list` of :py:class:`aiogremlin.subprotocol.Message`
-
-
-Using Gremlin Server sessions with :py:class:`GremlinClientSession`.
---------------------------------------------------------------------
-
-The Gremlin Server supports sessions to maintain state across server
-messages. Although this is not the preffered method, it is quite useful in
-certain situations. For convenience, :py:mod:`aiogremlin` provides the class
-:py:class:`aiogremlin.client.GremlinClientSession`. It is basically the
-same as the :py:class:`GremlinClient`, but it uses sessions by default::
-
-    >>> client = aiogremlin.GremlinClientSession()
-    >>> client.session
-    '533f15fb-dc2e-4768-86c5-5b136b380b65'
-    >>> client.reset_session()
-    'd7bdb0da-d4ec-4609-8ac0-df9713803d43'
-
-That's basically it! For more info, see the
-:ref:`Client Reference Guide<aiogremlin-client-reference>`
-
-
-
-
-
-
-
-
-
-
-.. _Gremlin Server: http://tinkerpop.incubator.apache.org/
+1. Passing configuration values as kwargs or a :py:class:`dict` to the classmethod
+:py:meth:`open<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection.open>`::
+
+    >>> remote_connection = await DriverRemoteConnection.open(
+    ...    'ws://localhost:8182/gremlin', 'g', port=9430)
+
+2. Passing a :py:class:`Cluster<aiogremlin.driver.cluster.Cluster>` object to the
+classmethod
+:py:meth:`using<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection.using>`::
+
+    >>> import asyncio
+    >>> from aiogremlin import Cluster
+    >>> loop = asyncio.get_event_loop()
+    >>> cluster = await Cluster.open(loop, port=9430, aliases={'g': 'g'})
+    >>> remote_connection = await DriverRemoteConnection.using(cluster)
+
+In the case that the
+:py:class:`DriverRemoteConnection<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection>`
+is created with
+:py:meth:`using<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection.using>`,
+it is not necessary to close the
+:py:class:`DriverRemoteConnection<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection>`,
+but the underlying :py:class:`Cluster<aiogremlin.driver.cluster.Cluster>` must be closed::
+
+    >>> await cluster.close()
+
+Configuration options are specified in the final section of this document.
+
+:py:class:`DriverRemoteConnection<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection>`
+is also an asynchronous context manager. It can be used as follows::
+
+    >>> async with remote_connection:
+    ...     g = Graph().traversal().withRemote(remote_connection)
+    ...     # traverse
+    # remote_connection is closed upon exit
+
+Taking this one step further, the
+:py:meth:`open<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection.open>`
+can be awaited in the async context manager statement::
+
+    >>> async with await DriverRemoteConnection.open() as remote_connection:
+    ...     g = Graph().traversal().withRemote(remote_connection)
+    ...     # traverse
+    # remote connection is closed upon exit
+
+Using the :py:mod:`driver<aiogremlin.driver>` Module
+----------------------------------------------------
+
+:py:mod:`aiogremlin` also includes an asynchronous driver modeled after the
+official Gremlin-Python driver implementation. However, instead of using
+threads for asynchronous I/O, it uses an :py:mod:`asyncio` based implemenation.
+
+To submit a raw Gremlin script to the server, use the
+:py:class:`Client<aiogremlin.driver.client.Client>`. This class should not
+be instantiated directly, instead use a
+:py:class:`Cluster<aiogremlin.driver.cluster.Cluster>` object::
+
+    >>> cluster = await Cluster.open(loop)
+    >>> client = await cluster.connect()
+    >>> result_set = await client.submit('g.V().hasLabel(x)', {'x': 'person'})
+
+The :py:class:`ResultSet<aiogremlin.driver.resultset.ResultSet>` returned by
+:py:meth:`Client<aiogremlin.driver.client.Client.submit>` implements the
+async interator protocol::
+
+    >>> async for v in result_set:
+    ...     print(v)
+
+It also provides a convenience method
+:py:meth:`all<aiogremlin.driver.client.Client.all>`
+that aggregates and returns the result of the script in a :py:class:`list`::
+
+    >>> results = await result_set.all()
+
+Closing the client will close the underlying cluster::
+
+    >>> await client.close()
+
+Configuring the :py:class:`Cluster<aiogremlin.driver.cluster.Cluster>` object
+-----------------------------------------------------------------------------
+
+Configuration options can be set on
+:py:class:`Cluster<aiogremlin.driver.cluster.Cluster>` in one of two ways, either
+passed as keyword arguments to
+:py:meth:`Cluster<aiogremlin.driver.cluster.Cluster.open>`, or stored in a configuration
+file and passed to the :py:meth:`open<aiogremlin.driver.cluster.Cluster.open>`
+using the kwarg `configfile`. Configuration files can be either YAML or JSON
+format. Currently, :py:class:`Cluster<aiogremlin.driver.cluster.Cluster>`
+uses the following configuration:
+
++-------------------+----------------------------------------------+-------------+
+|Key                |Description                                   |Default      |
++===================+==============================================+=============+
+|scheme             |URI scheme, typically 'ws' or 'wss' for secure|'ws'         |
+|                   |websockets                                    |             |
++-------------------+----------------------------------------------+-------------+
+|hosts              |A list of hosts the cluster will connect to   |['localhost']|
++-------------------+----------------------------------------------+-------------+
+|port               |The port of the Gremlin Server to connect to, |8182         |
+|                   |same for all hosts                            |             |
++-------------------+----------------------------------------------+-------------+
+|ssl_certfile       |File containing ssl certificate               |''           |
++-------------------+----------------------------------------------+-------------+
+|ssl_keyfile        |File containing ssl key                       |''           |
++-------------------+----------------------------------------------+-------------+
+|ssl_password       |File containing password for ssl keyfile      |''           |
++-------------------+----------------------------------------------+-------------+
+|username           |Username for Gremlin Server authentication    |''           |
++-------------------+----------------------------------------------+-------------+
+|password           |Password for Gremlin Server authentication    |''           |
++-------------------+----------------------------------------------+-------------+
+|response_timeout   |Timeout for reading responses from the stream |`None`       |
++-------------------+----------------------------------------------+-------------+
+|max_conns          |The maximum number of connections open at any |4            |
+|                   |time to this host                             |             |
++-------------------+----------------------------------------------+-------------+
+|min_conns          |The minimum number of connection open at any  |1            |
+|                   |time to this host                             |             |
++-------------------+----------------------------------------------+-------------+
+|max_times_acquired |The maximum number of times a single pool     |16           |
+|                   |connection can be acquired and shared         |             |
++-------------------+----------------------------------------------+-------------+
+|max_inflight       |The maximum number of unresolved messages     |64           |
+|                   |that may be pending on any one connection     |             |
++-------------------+----------------------------------------------+-------------+
+|message_serializer |String denoting the class used for message    |'classpath'  |
+|                   |serialization, currently only supports        |             |
+|                   |basic GraphSONMessageSerializer               |             |
++-------------------+----------------------------------------------+-------------+

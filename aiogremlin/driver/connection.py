@@ -28,15 +28,16 @@ class Connection:
     :py:meth:`Connection.open<aiogremlin.connection.Connection.open>`.
 
     :param str url: url for host Gremlin Server
-    :param aiohttp.ClientWebSocketResponse ws: open websocket connection
+    :param aiogremlin.gremlin_python.driver.transport.AbstractBaseTransport transport:
+        Transport implementation
+    :param aiogremlin.gremlin_python.driver.protocol.AbstractBaseProtocol protocol:
+        Protocol implementation
     :param asyncio.BaseEventLoop loop:
-    :param aiohttp.ClientSession: Client session used to establish websocket
-        connections
-    :param float response_timeout: (optional) `None` by default
     :param str username: Username for database auth
     :param str password: Password for database auth
     :param int max_inflight: Maximum number of unprocessed requests at any
         one time on the connection
+    :param float response_timeout: (optional) `None` by default
     """
     def __init__(self, url, transport, protocol, loop, username, password,
                  max_inflight, response_timeout, message_serializer, provider):
@@ -73,6 +74,9 @@ class Connection:
 
         :param str url: url for host Gremlin Server
         :param asyncio.BaseEventLoop loop:
+        :param aiogremlin.gremlin_python.driver.protocol.AbstractBaseProtocol protocol:
+            Protocol implementation
+        :param func transport_factory: Factory function for transports
         :param ssl.SSLContext ssl_context:
         :param str username: Username for database auth
         :param str password: Password for database auth
@@ -80,6 +84,8 @@ class Connection:
         :param int max_inflight: Maximum number of unprocessed requests at any
             one time on the connection
         :param float response_timeout: (optional) `None` by default
+        :param message_serializer: Message serializer implementation
+        :param provider: Graph provider object implementation
 
         :returns: :py:class:`Connection<aiogremlin.connection.Connection>`
         """
@@ -100,7 +106,7 @@ class Connection:
     @property
     def closed(self):
         """
-        Check if connection has been closed.
+        Read-only property. Check if connection has been closed.
 
         :returns: `bool`
         """
@@ -119,10 +125,7 @@ class Connection:
         """
         Submit a script and bindings to the Gremlin Server
 
-        :param str processor: Gremlin Server processor argument
-        :param str op: Gremlin Server op argument
-        :param args: Keyword arguments for Gremlin Server. Depend on processor
-            and op.
+        :param `RequestMessage<aiogremlin.gremlin_python.driver.request.RequestMessage>` message:
         :returns: :py:class:`ResultSet<aiogremlin.driver.resultset.ResultSet>`
             object
         """
@@ -163,4 +166,4 @@ class Connection:
 
     async def __aexit__(self, exc_type, exc, tb):
         await self.close()
-        self._conn = None
+        self._transport = None

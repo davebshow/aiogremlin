@@ -1,87 +1,38 @@
-# aiogremin is no longer maintained. Please use Goblin: https://github.com/ZEROFAIL/goblin
+# [aiogremlin 3.2.4](https://pypi.python.org/pypi/aiogremlin/3.2.4)
 
+[Official Documentation](http://aiogremlin.readthedocs.org/en/latest/)
 
-# [aiogremlin 0.1.3](https://pypi.python.org/pypi/aiogremlin/0.0.11)
+`aiogremlin` is a port of the official `Gremlin-Python` designed for integration with
+event loop based asynchronous Python networking libraries, including `asyncio`,
+`aiohttp`, `tornado`, and `curio`. It uses the `async/await` syntax introduced
+in PEP 492, and is therefore Python 3.5+ only.
 
-## [Official Documentation](http://aiogremlin.readthedocs.org/en/latest/)
+`aiogremlin` tries to follow `Gremlin-Python` as closely as possible both in terms
+of API and implementation. It is regularly rebased against the official Apache Git
+repository, and will be released according to the TinkerPop release schedule.
 
-`aiogremlin` is a **Python 3** driver for the the [Tinkerpop 3 Gremlin Server](http://tinkerpop.incubator.apache.org/docs/3.0.0.M9-incubating/#gremlin-server). This module is built on [Asyncio](https://docs.python.org/3/library/asyncio.html) and [aiohttp](http://aiohttp.readthedocs.org/en/v0.15.3/index.html) `aiogremlin` is currently in **alpha** mode, but all major functionality has test coverage.
+Note that this *NOT* an official Apache project component, it is a
+*THIRD PARTY PACKAGE!*
 
-
-## Getting started
-
-Since Python 3.4 is not the default version on many systems, it's nice to create a virtualenv that uses Python 3.4 by default. Then use pip to install `aiogremlin`. Using virtualenvwrapper on Ubuntu 14.04:
-
-```bash
-$ mkvirtualenv -p /usr/bin/python3.4 aiogremlin
-$ pip install aiogremlin
-```
-
-Fire up the Gremlin Server:
-
-```bash
-$ ./bin/gremlin-server.sh
-```
-
-The `GremlinClient` communicates asynchronously with the Gremlin Server using websockets. The majority of `GremlinClient` methods are an `asyncio.coroutine`, so you will also need to use `asyncio`:
+## Getting Started
 
 ```python
->>> import asyncio
->>> from aiogremlin import GremlinClient
-```
-
-The Gremlin Server responds with messages in chunks, `GremlinClient.submit` submits a script to the server, and returns a `GremlinResponse` object. This object provides the methods: `get` and the property `stream`. `get` collects all of the response messages and returns them as a Python list. `stream` returns an object of the type `GremlinResponseStream` that implements a method `read`. This allows you to read the response without loading all of the messages into memory.
-
-Note that the GremlinClient constructor and the create_client function take [keyword only arguments](https://www.python.org/dev/peps/pep-3102/) only!
+import asyncio
+from aiogremlin import DriverRemoteConnection, Graph
 
 
-```python
->>> loop = asyncio.get_event_loop()
->>> gc = GremlinClient(url='ws://localhost:8182/', loop=loop)  # Default url
+loop = asyncio.get_event_loop()
 
-# Use get.
->>> @asyncio.coroutine
-... def get(gc):
-...     resp = yield from gc.submit("x + x", bindings={"x": 4})
-...     result = yield from resp.get()
-...     return result
 
->>> result = loop.run_until_complete(get(gc))
->>> result
-[Message(status_code=200, data=[8], message={}, metadata='')]
+async def go(loop):
+  remote_connection = await DriverRemoteConnection.open(
+    'ws://localhost:8182/gremlin', 'g')
+  g = Graph().traversal().withRemote(remote_connection)
+  vertices = await g.V().toList()
+  return vertices
 
->>> resp = result[0]
->>> resp.status_code
-200
 
->>> resp  # Named tuple.
-Message(status_code=200, data=[8], message={}, metadata='')
-
-# Use stream.
->>> @asyncio.coroutine
-... def stream(gc):
-...     resp = yield from gc.submit("x + x", bindings={"x": 1})
-...     while True:
-...         result = yield from resp.stream.read()
-...         if result is None:
-...             break
-...         print(result)
->>> loop.run_until_complete(stream(gc))
-Message(status_code=200, data=[2], message={}, metadata='')
-
->>> loop.run_until_complete(gc.close())  # Explicitly close client!!!
->>> loop.close()
-```
-
-For convenience, `aiogremlin` also provides a method `execute`, which is equivalent to calling  `yield from submit()` and then `yield from get()` in the same coroutine.
-
-```python
->>> loop = asyncio.get_event_loop()
->>> gc = GremlinClient(loop=loop)
->>> execute = gc.execute("x + x", bindings={"x": 4})
->>> result = loop.run_until_complete(execute)
->>> result
-[Message(status_code=200, data=[8], message={}, metadata='')]
->>> loop.run_until_complete(gc.close())  # Explicitly close client!!!
->>> loop.close()
+vertices = loop.run_until_complete(go(loop))
+print(vertices)
+# [v[1], v[2], v[3], v[4], v[5], v[6]]
 ```

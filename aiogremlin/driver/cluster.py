@@ -35,6 +35,8 @@ class Cluster:
     level interface used by the :py:mod:`aiogremlin` module.
 
     :param asyncio.BaseEventLoop loop:
+    :param dict aliases: Optional mapping for aliases. Default is `None`
+    :param config: Optional cluster configuration passed as kwargs or `dict`
     """
 
     DEFAULT_CONFIG = {
@@ -73,8 +75,10 @@ class Cluster:
         specified in configuration.
 
         :param asyncio.BaseEventLoop loop:
+        :param dict aliases: Optional mapping for aliases. Default is `None`
         :param str configfile: Optional configuration file in .json or
             .yml format
+        :param config: Optional cluster configuration passed as kwargs or `dict`
         """
         cluster = cls(loop, aliases=aliases, **config)
         if configfile:
@@ -84,12 +88,13 @@ class Cluster:
 
     @property
     def hosts(self):
+        """Read-only property"""
         return self._hosts
 
     @property
     def config(self):
         """
-        Readonly property.
+        Read-only property.
 
         :returns: `dict` containing the cluster configuration
         """
@@ -100,7 +105,7 @@ class Cluster:
         **coroutine** Get connection from next available host in a round robin
         fashion.
 
-        :returns: :py:class:`Connection<aiogremlin.connection.Connection>`
+        :returns: :py:class:`Connection<aiogremlin.driver.connection.Connection>`
         """
         if not self._hosts:
             await self.establish_hosts()
@@ -136,6 +141,11 @@ class Cluster:
             raise exception.ConfigurationError('Unknown config file format')
 
     def config_from_yaml(self, filename):
+        """
+        Load configuration from from YAML file.
+
+        :param str filename: Path to the configuration file.
+        """
         with open(filename, 'r') as f:
             config = yaml.load(f)
         config = self._process_config_imports(config)
@@ -162,6 +172,11 @@ class Cluster:
         return config
 
     def config_from_module(self, module):
+        """
+        Load configuration from Python module.
+
+        :param str filename: Path to the configuration file.
+        """
         if isinstance(module, str):
             module = importlib.import_module(module)
         config = dict()
@@ -175,7 +190,8 @@ class Cluster:
         """
         **coroutine** Get a connected client. Main API method.
 
-        :returns: A connected instance of `Client<aiogremlin.client.Client>`
+        :returns: A connected instance of
+            `Client<aiogremlin.driver.client.Client>`
         """
         aliases = aliases or self._aliases
         if not self._hosts:

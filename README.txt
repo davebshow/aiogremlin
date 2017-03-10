@@ -1,8 +1,6 @@
-=========================================================
-aiogremlin - Async Python 3 driver for TP3 Gremlin Server
-=========================================================
-
-**alpha**
+=====================================================
+aiogremlin - Async Python 3.5+ port of Gremlin-Python
+=====================================================
 
 
 `Official Documentation`_

@@ -1,56 +1,22 @@
-.. _aiogremlin-client-reference:
-
-Client Reference
-================
-
 aiogremlin package
--------------------------
+==================
 
-.. automodule:: aiogremlin
-    :members:
-    :undoc-members:
-    :show-inheritance:
+Subpackages
+-----------
 
-aiogremlin.client module
-------------------------
+.. toctree::
 
-.. automodule:: aiogremlin.client
-    :members:
-    :undoc-members:
-    :show-inheritance:
+    aiogremlin.driver
+    aiogremlin.gremlin_python
+    aiogremlin.remote
 
-aiogremlin.connector module
+Submodules
+----------
+
+aiogremlin.exception module
 ---------------------------
 
-This module is based on :py:class:`aiohttp.client.ClientSession` and
-:py:class:`aiohttp.connector.BaseConnector`.
-
-.. automodule:: aiogremlin.connector
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    :inherited-members:
-
-aiogremlin.exceptions module
-----------------------------
-
-.. automodule:: aiogremlin.exceptions
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-aiogremlin.response module
---------------------------
-
-.. automodule:: aiogremlin.response
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-aiogremlin.subprotocol module
------------------------------
-
-.. automodule:: aiogremlin.subprotocol
+.. automodule:: aiogremlin.exception
     :members:
     :undoc-members:
     :show-inheritance:

@@ -75,19 +75,19 @@ class Traversal(object):
             self.last_traverser = None
             return temp
     async def next(self, amount=None):
-        if amount is None:
-            return await self.__anext__()
-        else:
-            count = 0
-            tempList = []
-            while count < amount:
-                count = count + 1
-                try:
-                    temp = await self.__anext__()
-                except StopAsyncIteration:
-                    return tempList
-                tempList.append(temp)
-            return tempList
+        if not amount:
+            try:
+                return await self.__anext__()
+            except StopAsyncIteration:
+                return
+        results = []
+        for i in range(amount):
+            try:
+                result = await self.__anext__()
+            except StopAsyncIteration:
+                return results
+            results.append(result)
+        return results
 
 
 Barrier = Enum('Barrier', 'normSack')

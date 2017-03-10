@@ -14,33 +14,29 @@ class Client:
     :param aiogremlin.cluster.Cluster cluster: Cluster used by
         client
     :param asyncio.BaseEventLoop loop:
+    :param dict aliases: Optional mapping for aliases. Default is `None`
     """
-    def __init__(self, cluster, loop, *, aliases=None, processor=None,
-                 op=None):
+    def __init__(self, cluster, loop, *, aliases=None):
         self._cluster = cluster
         self._loop = loop
         if aliases is None:
             aliases = {}
         self._aliases = aliases
-        if processor is None:
-            processor = ''
-        self._processor = processor
-        if op is None:
-            op = 'eval'
-        self._op = op
 
     @property
     def aliases(self):
+        """Read-only property"""
         return self._aliases
 
     @property
     def message_serializer(self):
+        """Read-only property"""
         return self.cluster.config['message_serializer']
 
     @property
     def cluster(self):
         """
-        Readonly property.
+        Read-only property.
 
         :returns: The instance of
             :py:class:`Cluster<aiogremlin.driver.cluster.Cluster>` associated with
@@ -60,6 +56,11 @@ class Client:
         """
         **coroutine** Submit a script and bindings to the Gremlin Server.
 
+        :param message: Can be an instance of
+            `Message<aiogremlin.gremlin_python.request.RequestMessage>` or
+            `Bytecode<aiogremlin.gremlin_python.process.traversal.Bytecode>`
+            or a `str` representing a raw Gremlin script
+        :param dict bindings: Optional bindings used with raw Grelmin
         :returns: :py:class:`ResultSet<aiogremlin.driver.resultset.ResultSet>`
             object
         """

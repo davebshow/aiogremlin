@@ -7,32 +7,35 @@
 aiogremlin
 ==========
 
-aiogremlin is no longer maintained!!! Please use Goblin: http://goblin.readthedocs.io/en/latest/index.html
-:py:mod:`aiogremlin` is an asynchronous client for the `TinkerPop 3 Gremlin Server`_
-based on the `asyncio`_ and `aiohttp`_ libraries.
+`aiogremlin` is a port of the official `Gremlin-Python` designed for integration with
+event loop based asynchronous Python networking libraries, including `asyncio`_,
+`aiohttp`_, and `tornado`_. It uses the `async/await` syntax introduced
+in `PEP 492`_, and is therefore Python 3.5+ only.
+
+`aiogremlin` tries to follow `Gremlin-Python` as closely as possible both in terms
+of API and implementation. It is regularly rebased against the official Apache Git
+repository, and will be released according to the `TinkerPop`_ release schedule.
+
+Note that this *NOT* an official Apache project component, it is a
+*THIRD PARTY PACKAGE!*
 
 Releases
 ========
-The latest release of :py:mod:`aiogremlin` is **0.1.3**.
+The latest release of :py:mod:`aiogremlin` is **3.2.4**.
 
 
 Requirements
 ============
 
-- Python 3.4
-- TinkerPop 3 Gremlin Server 3.1.0
+- Python 3.5+
+- TinkerPop 3.2.4
 
-Using Python 2? Checkout `gremlinrestclient`_.
 
 Dependencies
 ============
-- aiohttp 0.18.4
-- aiowebsocketclient 0.0.4
+- aiohttp 1.3.3
+- PyYAML 3.12
 
-To speed up serialization, you can also install `ujson`_. If not available,
-aiogremlin will use the Python standard library :any:`json<json>` module.
-
-- ujson 1.33
 
 
 Installation
@@ -46,35 +49,37 @@ Getting Started
 ===============
 
 :py:mod:`aiogremlin` has a simple API that is quite easy to use. However, as it relies
-heavily on `asyncio`_ and `aiohttp`_, it is helpful to be familar with the
-basics of these modules. If you're not, maybe check out the :py:mod:`asyncio`
-documentation relating to the :ref:`event loop<asyncio-event-loop>` and the
-concept of the :ref:`coroutine<coroutine>`. Also, I would recommend the
-documentation relating to :py:mod:`aiohttp`'s
-:ref:`websocket client<aiohttp-client-websockets>` and
-:ref:`HTTP client<aiohttp-client-reference>` implementations.
+heavily on `asyncio`_ and `aiohttp`_, it is helpful to be familiar with the
+basics of these modules.
+
+:py:mod:`aiogremlin` is *very* similar to Gremlin-Python, except it is all async, all the time.
 
 Minimal Example
 ---------------
 Submit a script to the Gremlin Server::
 
     >>> import asyncio
-    >>> import aiogremlin
-    >>> @asyncio.coroutine
-    ... def go():
-    ...     resp = yield from aiogremlin.submit("1 + 1")
-    ...     return (yield from resp.get())
+    >>> from aiogremlin import DriverRemoteConnection, Graph
+
     >>> loop = asyncio.get_event_loop()
-    >>> results = loop.run_until_complete(go())
+
+    >>> async def go(loop):
+    ...    remote_connection = await DriverRemoteConnection.open(
+    ...        'ws://localhost:8182/gremlin', 'g')
+    ...    g = Graph().traversal().withRemote(remote_connection)
+    ...    vertices = await g.V().toList()
+    ...    return vertices
+
+    >>> results = loop.run_until_complete(go(loop))
     >>> results
-    [Message(status_code=200, data=[2], message={}, metadata='')]
+    # [v[1], v[2], v[3], v[4], v[5], v[6]]
 
 
 The above example demonstrates how :py:mod:`aiogremlin` uses the
 :ref:`event loop<asyncio-event-loop>` to drive communication with the Gremlin
 Server, but the **rest of examples are written as if they were run in a Python
 interpreter**. In reality, **this isn't possible**, so remember, code *must*
-be wrapped in functions and run with the :ref:`event loop<asyncio-event-loop>`.
+be wrapped in a coroutine and run with the :ref:`event loop<asyncio-event-loop>`.
 
 Contribute
 ----------
@@ -103,9 +108,9 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. _Tinkerpop 3 Gremlin Server: http://tinkerpop.incubator.apache.org/
+.. _TinkerPop: http://tinkerpop.apache.org/
 .. _`asyncio`: https://docs.python.org/3/library/asyncio.html
 .. _`aiohttp`: http://aiohttp.readthedocs.org/en/latest/
-.. _`ujson`: https://pypi.python.org/pypi/ujson
+.. _`Tornado`: http://www.tornadoweb.org/en/stable/
+.. _`PEP 492`: https://www.python.org/dev/peps/pep-0492/
 .. _Github: https://github.com/davebshow/aiogremlin/issues
-.. _`gremlinrestclient`: http://gremlinrestclient.readthedocs.org/en/latest/

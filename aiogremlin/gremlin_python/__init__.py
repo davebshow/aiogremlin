@@ -16,5 +16,10 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 '''
-
+'''THIS FILE HAS BEEN MODIFIED BY DAVID M. BROWN TO SUPPORT PEP 492'''
 __author__ = 'Marko A. Rodriguez (http://markorodriguez.com)'
+
+from aiogremlin.gremlin_python.statics import *
+from aiogremlin.gremlin_python.process.graph_traversal import __
+from aiogremlin.gremlin_python.process.strategies import *
+from aiogremlin.gremlin_python.process.traversal import Binding

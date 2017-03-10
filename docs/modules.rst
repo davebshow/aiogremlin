@@ -1,7 +1,7 @@
-API
-===
+aiogremlin API
+==============
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    aiogremlin

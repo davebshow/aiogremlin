@@ -12,6 +12,7 @@ def error_handler(fn):
             if msg.status_code not in [200, 206]:
                 self.close()
                 raise exception.GremlinServerError(
+                    msg.status_code,
                     "{0}: {1}".format(msg.status_code, msg.message))
             msg = msg.data
         return msg
@@ -38,7 +39,7 @@ class ResultSet:
 
     def queue_result(self, result):
         if result is None:
-            self.done.set()
+            self.close()
         self._response_queue.put_nowait(result)
 
     @property
@@ -68,10 +69,8 @@ class ResultSet:
         return msg
 
     def close(self):
-        """Close response stream by setting done flag to true."""
         self.done.set()
         self._loop = None
-        self._response_queue = None
 
     @error_handler
     async def one(self):
@@ -79,7 +78,6 @@ class ResultSet:
         if not self._response_queue.empty():
             msg = self._response_queue.get_nowait()
         elif self.done.is_set():
-            self.close()
             msg = None
         else:
             try:
