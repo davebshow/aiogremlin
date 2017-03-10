@@ -3,9 +3,9 @@ from setuptools import setup
 
 setup(
     name='aiogremlin',
-    version='3.2.4-rc.1',
+    version='3.2.4b1',
     url='',
-    license='Apache',
+    license='Apache Software License',
     author='davebshow',
     author_email='davebshow@gmail.com',
     description='Async Gremlin-Python',
