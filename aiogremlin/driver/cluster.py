@@ -63,6 +63,7 @@ class Cluster:
         default_config.update(config)
         self._config = self._process_config_imports(default_config)
         self._hosts = collections.deque()
+        self._hostmap = {}
         self._closed = False
         if aliases is None:
             aliases = {}
@@ -100,7 +101,7 @@ class Cluster:
         """
         return self._config
 
-    async def get_connection(self):
+    async def get_connection(self, hostname=None):
         """
         **coroutine** Get connection from next available host in a round robin
         fashion.
@@ -109,7 +110,14 @@ class Cluster:
         """
         if not self._hosts:
             await self.establish_hosts()
-        host = self._hosts.popleft()
+        if hostname:
+            try:
+                host = self._hostmap[hostname]
+            except KeyError:
+                raise exception.ConfigError(
+                    'Unknown host: {}'.format(hostname))
+        else:
+            host = self._hosts.popleft()
         conn = await host.get_connection()
         self._hosts.append(host)
         return conn
@@ -121,11 +129,12 @@ class Cluster:
         scheme = self._config['scheme']
         hosts = self._config['hosts']
         port = self._config['port']
-        for host in hosts:
-            url = '{}://{}:{}/gremlin'.format(scheme, host, port)
+        for hostname in hosts:
+            url = '{}://{}:{}/gremlin'.format(scheme, hostname, port)
             host = await driver.GremlinServer.open(
                 url, self._loop, **dict(self._config))
             self._hosts.append(host)
+            self._hostmap[hostname] = host
 
     def config_from_file(self, filename):
         """
@@ -186,7 +195,7 @@ class Cluster:
         config = self._process_config_imports(config)
         self.config.update(config)
 
-    async def connect(self, aliases=None):
+    async def connect(self, hostname=None, aliases=None):
         """
         **coroutine** Get a connected client. Main API method.
 
@@ -202,7 +211,8 @@ class Cluster:
         #                                     aliases=aliases)
         #     self._hosts.append(host)
         # else:
-        client = driver.Client(self, self._loop, aliases=aliases)
+        client = driver.Client(self, self._loop, hostname=hostname,
+                               aliases=aliases)
         return client
 
     async def close(self):

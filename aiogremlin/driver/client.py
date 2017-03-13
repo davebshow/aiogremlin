@@ -16,11 +16,12 @@ class Client:
     :param asyncio.BaseEventLoop loop:
     :param dict aliases: Optional mapping for aliases. Default is `None`
     """
-    def __init__(self, cluster, loop, *, aliases=None):
+    def __init__(self, cluster, loop, *, hostname=None, aliases=None):
         self._cluster = cluster
         self._loop = loop
         if aliases is None:
             aliases = {}
+        self._hostname = hostname
         self._aliases = aliases
 
     @property
@@ -76,7 +77,7 @@ class Client:
                       'aliases': self._aliases})
             if bindings:
                 message.args.update({'bindings': bindings})
-        conn = await self.cluster.get_connection()
+        conn = await self.cluster.get_connection(hostname=self._hostname)
         resp = await conn.write(message)
         self._loop.create_task(conn.release_task(resp))
         return resp

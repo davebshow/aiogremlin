@@ -45,6 +45,17 @@ async def test_alias(cluster):
     await cluster.close()
 
 
+@pytest.mark.asyncio
+async def test_client_auto_release(cluster):
+    client = await cluster.connect(hostname='localhost')
+    resp = await client.submit("1 + 1")
+    async for msg in resp:
+        assert msg == 2
+    assert client._hostname == 'localhost'
+    await cluster.close()
+
+
+
 # @pytest.mark.asyncio
 # async def test_sessioned_client(cluster):
 #     session = str(uuid.uuid4())

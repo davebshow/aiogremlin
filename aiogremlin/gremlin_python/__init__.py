@@ -22,4 +22,4 @@ __author__ = 'Marko A. Rodriguez (http://markorodriguez.com)'
 from aiogremlin.gremlin_python.statics import *
 from aiogremlin.gremlin_python.process.graph_traversal import __
 from aiogremlin.gremlin_python.process.strategies import *
-from aiogremlin.gremlin_python.process.traversal import Binding
+from aiogremlin.gremlin_python.process.traversal import Binding, Cardinality
