@@ -1,3 +1,5 @@
+import ssl
+
 from aiogremlin.driver import pool
 
 
