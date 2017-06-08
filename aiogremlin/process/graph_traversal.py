@@ -8,7 +8,7 @@ from gremlin_python.process import graph_traversal, traversal
 class AsyncGraphTraversal(graph_traversal.GraphTraversal):
     """Implements async iteration protocol and updates relevant methods"""
 
-    async def __aiter__(self):
+    def __aiter__(self):
         return self
 
     async def __anext__(self):
