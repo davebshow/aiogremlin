@@ -4,7 +4,6 @@ from gremlin_python.process import traversal
 
 
 class AsyncTraversalStrategies(traversal.TraversalStrategies):
-    global_cache = {}
 
     async def apply_strategies(self, traversal):
         for traversal_strategy in self.traversal_strategies:
