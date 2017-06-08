@@ -1,9 +1,7 @@
-from gremlin_python.process import traversal
+from gremlin_python.driver.remote_connection import RemoteStrategy
 
 
-class AsyncRemoteStrategy(traversal.TraversalStrategy):
-    def __init__(self, remote_connection):
-        self.remote_connection = remote_connection
+class AsyncRemoteStrategy(RemoteStrategy):
 
     async def apply(self, traversal):
         if traversal.traversers is None:
