@@ -3,7 +3,7 @@ from gremlin_python.process import traversal
 
 
 
-class RemoteTraversalSideEffects(traversal.TraversalSideEffects):
+class AsyncRemoteTraversalSideEffects(traversal.TraversalSideEffects):
     def __init__(self, side_effect, client):
         self._side_effect = side_effect
         self._client = client
@@ -14,7 +14,7 @@ class RemoteTraversalSideEffects(traversal.TraversalSideEffects):
     async def __getitem__(self, key):
         if isinstance(key, slice):
             raise TypeError(
-                'RemoteTraversalSideEffects does not support slicing')
+                'AsyncRemoteTraversalSideEffects does not support slicing')
         return await self.get(key)
 
     async def keys(self):

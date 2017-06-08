@@ -1,5 +1,5 @@
-from aiogremlin.process.traversal import TraversalStrategies
-from aiogremlin.remote.remote_connection import RemoteStrategy
+from aiogremlin.process.traversal import AsyncTraversalStrategies
+from aiogremlin.remote.remote_connection import AsyncRemoteStrategy
 
 from gremlin_python.process import graph_traversal, traversal
 
@@ -90,10 +90,10 @@ class AsyncGraphTraversalSource(graph_traversal.GraphTraversalSource):
 
     def withRemote(self, remote_connection):
         source = self.get_graph_traversal_source()
-        source.traversal_strategies.add_strategies([RemoteStrategy(remote_connection)])
+        source.traversal_strategies.add_strategies([AsyncRemoteStrategy(remote_connection)])
         return source
 
     def get_graph_traversal_source(self):
         return self.__class__(
-            self.graph, TraversalStrategies(self.traversal_strategies),
+            self.graph, AsyncTraversalStrategies(self.traversal_strategies),
             traversal.Bytecode(self.bytecode))

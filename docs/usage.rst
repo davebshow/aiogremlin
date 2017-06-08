@@ -46,7 +46,7 @@ Furthermore, it implements several convience methods - :py:meth:`toList`,
 
 :py:class:`Traversal<gremlin_python.process.traversal.Traversal>`
 also contains a reference to a
-:py:class:`RemoteTraversalSideEffects<aiogremlin.remote.driver_remote_side_effects.RemoteTraversalSideEffects>`
+:py:class:`AsyncRemoteTraversalSideEffects<aiogremlin.remote.driver_remote_side_effects.AsyncRemoteTraversalSideEffects>`
 object that can be used to fetch side effects cached by the server (when applicable)::
 
     >>> t = g.V().aggregate('a')
