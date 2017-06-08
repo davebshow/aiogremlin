@@ -19,7 +19,7 @@ import os
 import pytest
 
 from aiogremlin import driver, exception
-from aiogremlin.gremlin_python.driver import serializer
+from gremlin_python.driver import serializer
 
 import config_module
 

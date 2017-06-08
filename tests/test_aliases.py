@@ -4,7 +4,7 @@ import uuid
 import pytest
 
 from aiogremlin import driver
-from aiogremlin.gremlin_python.driver import request, serializer
+from gremlin_python.driver import request, serializer
 
 @pytest.mark.asyncio
 async def test_gremlin_query(event_loop, cluster):

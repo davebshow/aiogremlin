@@ -9,7 +9,7 @@ try:
 except ImportError:
     import json
 
-from aiogremlin.gremlin_python.driver import protocol, request, serializer
+from gremlin_python.driver import protocol, request, serializer
 
 
 __author__ = 'David M. Brown (davebshow@gmail.com)'

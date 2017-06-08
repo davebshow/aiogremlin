@@ -23,7 +23,7 @@ from aiogremlin.remote.driver_remote_connection import (
     DriverRemoteConnection)
 from aiogremlin.driver.protocol import GremlinServerWSProtocol
 from aiogremlin.driver.aiohttp.transport import AiohttpTransport
-from aiogremlin.gremlin_python.driver.serializer import GraphSONMessageSerializer
+from gremlin_python.driver.serializer import GraphSONMessageSerializer
 
 
 @pytest.fixture

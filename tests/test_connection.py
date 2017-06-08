@@ -26,7 +26,7 @@ from aiohttp import web
 from aiogremlin import driver
 from aiogremlin import exception
 from aiogremlin.driver import provider
-from aiogremlin.gremlin_python.driver import request, serializer
+from gremlin_python.driver import request, serializer
 
 
 @pytest.mark.asyncio

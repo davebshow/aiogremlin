@@ -19,8 +19,8 @@ under the License.
 '''THIS FILE HAS BEEN MODIFIED BY DAVID M. BROWN TO SUPPORT PEP 492'''
 import pytest
 
-from aiogremlin.gremlin_python.driver.request import RequestMessage
-from aiogremlin.gremlin_python.structure.graph import Graph
+from gremlin_python.driver.request import RequestMessage
+from aiogremlin.structure.graph import Graph
 
 __author__ = 'David M. Brown (davebshow@gmail.com)'
 

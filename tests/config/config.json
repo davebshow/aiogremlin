@@ -9,5 +9,5 @@
    "username":"dave",
    "password":"mypass",
    "ssl_keyfile":"",
-   "message_serializer":"aiogremlin.gremlin_python.driver.serializer.GraphSONMessageSerializer"
+   "message_serializer":"gremlin_python.driver.serializer.GraphSONMessageSerializer"
 }

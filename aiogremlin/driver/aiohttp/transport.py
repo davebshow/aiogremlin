@@ -1,6 +1,6 @@
 import aiohttp
 
-from aiogremlin.gremlin_python.driver import transport
+from gremlin_python.driver import transport
 
 
 class AiohttpTransport(transport.AbstractBaseTransport):

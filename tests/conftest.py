@@ -18,7 +18,7 @@ import asyncio
 import pytest
 from aiogremlin import driver
 from aiogremlin.driver.provider import TinkerGraph
-from aiogremlin.gremlin_python.driver import serializer
+from gremlin_python.driver import serializer
 
 
 # def pytest_generate_tests(metafunc):

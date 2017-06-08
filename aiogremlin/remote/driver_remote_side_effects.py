@@ -1,5 +1,5 @@
-from aiogremlin.gremlin_python.driver import request
-from aiogremlin.gremlin_python.process import traversal
+from gremlin_python.driver import request
+from gremlin_python.process import traversal
 
 
 

@@ -12,7 +12,7 @@ import yaml
 
 from aiogremlin import exception
 from aiogremlin import driver
-from aiogremlin.gremlin_python.driver import serializer
+from gremlin_python.driver import serializer
 
 
 def my_import(name):
@@ -52,7 +52,7 @@ class Cluster:
         'min_conns': 1,
         'max_times_acquired': 16,
         'max_inflight': 64,
-        'message_serializer': 'aiogremlin.gremlin_python.driver.serializer.GraphSONMessageSerializer',
+        'message_serializer': 'gremlin_python.driver.serializer.GraphSONMessageSerializer',
         'provider': 'aiogremlin.driver.provider.TinkerGraph'
     }
 

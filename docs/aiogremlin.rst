@@ -7,7 +7,7 @@ Subpackages
 .. toctree::
 
     aiogremlin.driver
-    aiogremlin.gremlin_python
+    gremlin_python
     aiogremlin.remote
 
 Submodules

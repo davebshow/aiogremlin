@@ -23,14 +23,14 @@ to focus on the syntax used by :py:mod:`aiogremlin`.
 
 To create a traversal source, simply use
 :py:class:`DriverRemoteConnection<aiogremlin.remote.driver_remote_connection.DriverRemoteConnection>`
-combined with :py:class:`Graph<aiogremlin.gremlin_python.structure.graph.Graph>`::
+combined with :py:class:`Graph<gremlin_python.structure.graph.Graph>`::
 
     >>> remote_connection = await DriverRemoteConnection.open(
     ...    'ws://localhost:8182/gremlin', 'g')
     >>>  g = Graph().traversal().withRemote(remote_connection)
 
 In :py:mod:`aiogremlin`, a
-:py:class:`Traversal<aiogremlin.gremlin_python.process.traversal.Traversal>`
+:py:class:`Traversal<gremlin_python.process.traversal.Traversal>`
 implements the Asynchronous Iterator Protocol as defined
 by PEP 492::
 
@@ -44,7 +44,7 @@ Furthermore, it implements several convience methods - :py:meth:`toList`,
     >>> vertex_set = await g.V().toSet()
     >>> next_vertex = await g.V().next() # returns next result from the stream
 
-:py:class:`Traversal<aiogremlin.gremlin_python.process.traversal.Traversal>`
+:py:class:`Traversal<gremlin_python.process.traversal.Traversal>`
 also contains a reference to a
 :py:class:`RemoteTraversalSideEffects<aiogremlin.remote.driver_remote_side_effects.RemoteTraversalSideEffects>`
 object that can be used to fetch side effects cached by the server (when applicable)::

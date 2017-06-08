@@ -1,8 +1,9 @@
 """Client for the Tinkerpop 3 Gremlin Server."""
 
 from aiogremlin import exception
-from aiogremlin.gremlin_python.driver import request
-from aiogremlin.gremlin_python.process import traversal
+
+from gremlin_python.driver import request
+from gremlin_python.process import traversal
 
 
 class Client:
@@ -58,8 +59,8 @@ class Client:
         **coroutine** Submit a script and bindings to the Gremlin Server.
 
         :param message: Can be an instance of
-            `Message<aiogremlin.gremlin_python.request.RequestMessage>` or
-            `Bytecode<aiogremlin.gremlin_python.process.traversal.Bytecode>`
+            `Message<gremlin_python.request.RequestMessage>` or
+            `Bytecode<gremlin_python.process.traversal.Bytecode>`
             or a `str` representing a raw Gremlin script
         :param dict bindings: Optional bindings used with raw Grelmin
         :returns: :py:class:`ResultSet<aiogremlin.driver.resultset.ResultSet>`
