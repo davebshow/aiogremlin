@@ -40,16 +40,6 @@ class AsyncGraphTraversal(graph_traversal.GraphTraversal):
                 await self.nextTraverser()
             except StopAsyncIteration:
                 return self
-            except StopAsyncIteration:
-                return
-        results = []
-        for i in range(amount):
-            try:
-                result = await self.__anext__()
-            except StopAsyncIteration:
-                return results
-            results.append(result)
-        return results
 
     async def nextTraverser(self):
         if self.traversers is None:
