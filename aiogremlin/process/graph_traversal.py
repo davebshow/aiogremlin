@@ -4,7 +4,6 @@ from aiogremlin.remote.remote_connection import AsyncRemoteStrategy
 from gremlin_python.process import graph_traversal, traversal
 
 
-
 class AsyncGraphTraversal(graph_traversal.GraphTraversal):
     """Implements async iteration protocol and updates relevant methods"""
 
