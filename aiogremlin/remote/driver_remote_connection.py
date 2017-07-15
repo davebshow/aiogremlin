@@ -2,9 +2,10 @@ import asyncio
 from urllib.parse import urlparse
 
 from aiogremlin.driver.cluster import Cluster
-from aiogremlin.gremlin_python.driver import serializer
-from aiogremlin.remote.driver_remote_side_effects import RemoteTraversalSideEffects
-from aiogremlin.gremlin_python.driver.remote_connection import RemoteTraversal
+from gremlin_python.driver import serializer
+from aiogremlin.remote.driver_remote_side_effects import (
+    AsyncRemoteTraversalSideEffects)
+from gremlin_python.driver.remote_connection import RemoteTraversal
 
 
 __author__ = 'David M. Brown (davebshow@gmail.com)'
@@ -90,7 +91,7 @@ class DriverRemoteConnection:
     async def submit(self, bytecode):
         """Submit bytecode to the Gremlin Server"""
         result_set = await self._client.submit(bytecode)
-        side_effects = RemoteTraversalSideEffects(result_set.request_id,
+        side_effects = AsyncRemoteTraversalSideEffects(result_set.request_id,
                                                   self._client)
         return RemoteTraversal(result_set, side_effects)
 

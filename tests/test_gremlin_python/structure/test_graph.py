@@ -22,12 +22,12 @@ __author__ = 'Marko A. Rodriguez (http://markorodriguez.com)'
 import unittest
 from unittest import TestCase
 
-from aiogremlin.gremlin_python.statics import long
-from aiogremlin.gremlin_python.structure.graph import Edge
-from aiogremlin.gremlin_python.structure.graph import Property
-from aiogremlin.gremlin_python.structure.graph import Vertex
-from aiogremlin.gremlin_python.structure.graph import VertexProperty
-from aiogremlin.gremlin_python.structure.graph import Path
+from gremlin_python.statics import long
+from gremlin_python.structure.graph import Edge
+from gremlin_python.structure.graph import Property
+from gremlin_python.structure.graph import Vertex
+from gremlin_python.structure.graph import VertexProperty
+from gremlin_python.structure.graph import Path
 
 
 class TestGraph(TestCase):

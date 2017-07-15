@@ -22,10 +22,10 @@ __author__ = 'Marko A. Rodriguez (http://markorodriguez.com)'
 import unittest
 from unittest import TestCase
 
-from aiogremlin.gremlin_python.structure.graph import Graph
-from aiogremlin.gremlin_python.process.traversal import P
-from aiogremlin.gremlin_python.process.traversal import Binding
-from aiogremlin.gremlin_python.process.graph_traversal import __
+from aiogremlin.structure.graph import Graph
+from gremlin_python.process.traversal import P
+from gremlin_python.process.traversal import Binding
+from gremlin_python.process.graph_traversal import __
 
 
 class TestTraversal(TestCase):

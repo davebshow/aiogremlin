@@ -19,16 +19,16 @@ under the License.
 '''THIS FILE HAS BEEN MODIFIED BY DAVID M. BROWN TO SUPPORT PEP 492'''
 import pytest
 
-from aiogremlin.gremlin_python import statics
-from aiogremlin.gremlin_python.statics import long
+from gremlin_python import statics
+from gremlin_python.statics import long
 from aiogremlin.remote.driver_remote_connection import (
     DriverRemoteConnection)
-from aiogremlin.gremlin_python.process.traversal import Traverser
-from aiogremlin.gremlin_python.process.traversal import TraversalStrategy
-from aiogremlin.gremlin_python.process.graph_traversal import __
-from aiogremlin.gremlin_python.structure.graph import Graph
-from aiogremlin.gremlin_python.structure.graph import Vertex
-from aiogremlin.gremlin_python.process.strategies import SubgraphStrategy
+from gremlin_python.process.traversal import Traverser
+from gremlin_python.process.traversal import TraversalStrategy
+from gremlin_python.process.graph_traversal import __
+from aiogremlin.structure.graph import Graph
+from gremlin_python.structure.graph import Vertex
+from gremlin_python.process.strategies import SubgraphStrategy
 
 __author__ = 'Marko A. Rodriguez (http://markorodriguez.com)'
 

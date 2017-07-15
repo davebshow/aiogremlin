@@ -22,10 +22,10 @@ __author__ = 'Marko A. Rodriguez (http://markorodriguez.com)'
 import unittest
 from unittest import TestCase
 
-from aiogremlin.gremlin_python import statics
-from aiogremlin.gremlin_python.process.traversal import Cardinality
-from aiogremlin.gremlin_python.process.traversal import P
-from aiogremlin.gremlin_python.process.traversal import Pop
+from gremlin_python import statics
+from gremlin_python.process.traversal import Cardinality
+from gremlin_python.process.traversal import P
+from gremlin_python.process.traversal import Pop
 
 
 class TestStatics(TestCase):

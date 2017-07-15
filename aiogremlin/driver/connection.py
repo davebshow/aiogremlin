@@ -15,7 +15,7 @@ except ImportError:
 from aiogremlin.driver import provider, resultset
 from aiogremlin.driver.protocol import GremlinServerWSProtocol
 from aiogremlin.driver.aiohttp.transport import AiohttpTransport
-from aiogremlin.gremlin_python.driver import serializer
+from gremlin_python.driver import serializer
 
 
 logger = logging.getLogger(__name__)
@@ -28,9 +28,9 @@ class Connection:
     :py:meth:`Connection.open<aiogremlin.connection.Connection.open>`.
 
     :param str url: url for host Gremlin Server
-    :param aiogremlin.gremlin_python.driver.transport.AbstractBaseTransport transport:
+    :param gremlin_python.driver.transport.AbstractBaseTransport transport:
         Transport implementation
-    :param aiogremlin.gremlin_python.driver.protocol.AbstractBaseProtocol protocol:
+    :param gremlin_python.driver.protocol.AbstractBaseProtocol protocol:
         Protocol implementation
     :param asyncio.BaseEventLoop loop:
     :param str username: Username for database auth
@@ -74,7 +74,7 @@ class Connection:
 
         :param str url: url for host Gremlin Server
         :param asyncio.BaseEventLoop loop:
-        :param aiogremlin.gremlin_python.driver.protocol.AbstractBaseProtocol protocol:
+        :param gremlin_python.driver.protocol.AbstractBaseProtocol protocol:
             Protocol implementation
         :param func transport_factory: Factory function for transports
         :param ssl.SSLContext ssl_context:
@@ -125,7 +125,7 @@ class Connection:
         """
         Submit a script and bindings to the Gremlin Server
 
-        :param `RequestMessage<aiogremlin.gremlin_python.driver.request.RequestMessage>` message:
+        :param `RequestMessage<gremlin_python.driver.request.RequestMessage>` message:
         :returns: :py:class:`ResultSet<aiogremlin.driver.resultset.ResultSet>`
             object
         """
