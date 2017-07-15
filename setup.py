@@ -5,15 +5,16 @@ from distutils.command.build_py import build_py as _build_py
 
 class build_py(_build_py):
     """Don't install tornado when installing gremlinpython"""
-    pip.main([
-    'install',
-    'git+https://git-wip-us.apache.org/repos/asf/tinkerpop.git@12aa2d2fe534fbd9540c9328725ab844e4bb1010#egg=gremlinpython&subdirectory=gremlin-python/src/main/jython',
-    '--no-deps'])
-
+    def run(self):
+        pip.main([
+        'install',
+        'gremlinpython==3.2.5',
+        '--no-deps'])
+        _build_py.run(self)
 
 setup(
     name='aiogremlin',
-    version='3.2.5rc1',
+    version='3.2.5rc4',
     url='',
     license='Apache Software License',
     author='davebshow',
@@ -43,7 +44,6 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3 :: Only'
+        'Programming Language :: Python :: 3.5'
     ]
 )
