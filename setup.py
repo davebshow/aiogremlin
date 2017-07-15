@@ -6,10 +6,7 @@ from distutils.command.build_py import build_py as _build_py
 class build_py(_build_py):
     """Don't install tornado when installing gremlinpython"""
     def run(self):
-        pip.main([
-        'install',
-        'gremlinpython==3.2.5',
-        '--no-deps'])
+        pip.main(['install', 'gremlinpython==3.2.5', '--no-deps'])
         _build_py.run(self)
 
 setup(
