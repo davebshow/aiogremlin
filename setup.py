@@ -9,9 +9,10 @@ class build_py(_build_py):
         pip.main(['install', 'gremlinpython==3.2.5', '--no-deps'])
         _build_py.run(self)
 
+
 setup(
     name='aiogremlin',
-    version='3.2.5rc4',
+    version='3.2.5',
     url='',
     license='Apache Software License',
     author='davebshow',
