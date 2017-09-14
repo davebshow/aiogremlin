@@ -1,18 +1,10 @@
 import pip
 from setuptools import setup
-from distutils.command.build_py import build_py as _build_py
-
-
-class build_py(_build_py):
-    """Don't install tornado when installing gremlinpython"""
-    def run(self):
-        pip.main(['install', 'gremlinpython==3.2.5', '--no-deps'])
-        _build_py.run(self)
 
 
 setup(
     name='aiogremlin',
-    version='3.2.5',
+    version='3.2.6',
     url='',
     license='Apache Software License',
     author='davebshow',
@@ -25,10 +17,9 @@ setup(
               'aiogremlin.process',
               'aiogremlin..structure',
               'aiogremlin.remote'],
-    cmdclass={'build_py': build_py},
     install_requires=[
         'aenum==1.4.5',  # required gremlinpython dep
-        'aiohttp==1.3.3',
+        'aiohttp==2.2.5',
         'PyYAML==3.12',
         'six==1.10.0'  # required gremlinpython dep
     ],

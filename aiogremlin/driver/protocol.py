@@ -41,18 +41,18 @@ class GremlinServerWSProtocol(protocol.AbstractBaseProtocol):
         self._transport.write(message)
 
     async def data_received(self, data, results_dict):
-        if data.tp == aiohttp.MsgType.close:
+        if data.tp == aiohttp.WSMsgType.close:
             await self._transport.close()
-        elif data.tp == aiohttp.MsgType.error:
+        elif data.tp == aiohttp.WSMsgType.error:
             # This won't raise properly, fix
             raise data.data
-        elif data.tp == aiohttp.MsgType.closed:
+        elif data.tp == aiohttp.WSMsgType.closed:
             # Hmm
             pass
         else:
-            if data.tp == aiohttp.MsgType.binary:
+            if data.tp == aiohttp.WSMsgType.binary:
                 data = data.data.decode()
-            elif data.tp == aiohttp.MsgType.text:
+            elif data.tp == aiohttp.WSMsgType.text:
                 data = data.data.strip()
             message = json.loads(data)
             request_id = message['requestId']
