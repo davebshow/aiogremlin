@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='aiogremlin',
-    version='3.2.6',
+    version='3.2.6rc1',
     url='',
     license='Apache Software License',
     author='davebshow',
@@ -15,7 +15,7 @@ setup(
               'aiogremlin.driver',
               'aiogremlin.driver.aiohttp',
               'aiogremlin.process',
-              'aiogremlin..structure',
+              'aiogremlin.structure',
               'aiogremlin.remote'],
     install_requires=[
         'aenum==1.4.5',  # required gremlinpython dep
