@@ -1,11 +1,6 @@
-import abc
 import asyncio
-import base64
-import collections
 import logging
 import uuid
-
-import aiohttp
 
 try:
     import ujson as json
@@ -135,7 +130,9 @@ class Connection:
             request_id, message)
         if self._transport.closed:
             await self._transport.connect(self.url)
-        self._transport.write(message)
+        func = self._transport.write(message)
+        if asyncio.iscoroutine(func):
+            await func
         result_set = resultset.ResultSet(request_id, self._response_timeout,
                                    self._loop)
         self._result_sets[request_id] = result_set

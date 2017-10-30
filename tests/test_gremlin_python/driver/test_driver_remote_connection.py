@@ -21,8 +21,6 @@ import pytest
 
 from gremlin_python import statics
 from gremlin_python.statics import long
-from aiogremlin.remote.driver_remote_connection import (
-    DriverRemoteConnection)
 from gremlin_python.process.traversal import Traverser
 from gremlin_python.process.traversal import TraversalStrategy
 from gremlin_python.process.graph_traversal import __
@@ -34,6 +32,12 @@ __author__ = 'Marko A. Rodriguez (http://markorodriguez.com)'
 
 
 class TestDriverRemoteConnection(object):
+
+    @pytest.mark.asyncio
+    async def test_label(self, remote_connection):
+        statics.load_statics(globals())
+        g = Graph().traversal().withRemote(remote_connection)
+        result = await g.V().limit(1).toList()
 
     @pytest.mark.asyncio
     async def test_traversals(self, remote_connection):
