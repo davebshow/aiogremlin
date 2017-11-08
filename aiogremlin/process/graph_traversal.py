@@ -22,18 +22,21 @@ class AsyncGraphTraversal(graph_traversal.GraphTraversal):
         return object
 
     async def toList(self):
+        """Reture results as ``list``."""
         results = []
         async for result in self:
             results.append(result)
         return results
 
     async def toSet(self):
+        """Return results as ``set``."""
         results = set()
         async for result in self:
             results.add(result)
         return results
 
     async def iterate(self):
+        """Iterate over results."""
         while True:
             try:
                 await self.nextTraverser()
@@ -41,6 +44,7 @@ class AsyncGraphTraversal(graph_traversal.GraphTraversal):
                 return self
 
     async def nextTraverser(self):
+        """Return next traverser."""
         if self.traversers is None:
             await self.traversal_strategies.apply_strategies(self)
         if self.last_traverser is None:
@@ -51,6 +55,7 @@ class AsyncGraphTraversal(graph_traversal.GraphTraversal):
             return temp
 
     async def next(self, amount=None):
+        """Return iterator with optionaly defined amount of items."""
         if not amount:
             try:
                 return await self.__anext__()
