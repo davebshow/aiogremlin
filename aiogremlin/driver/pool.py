@@ -8,11 +8,11 @@ from aiogremlin.driver import connection
 
 class PooledConnection:
     """
-    Wrapper for :py:class:`Connection<aiogremlin.connection.Connection>`
+    Wrapper for :py:class:`Connection<aiogremlin.driver.connection.Connection>`
     that helps manage tomfoolery associated with connection pooling.
 
-    :param aiogremlin.connection.Connection conn:
-    :param aiogremlin.pool.ConnectionPool pool:
+    :param aiogremlin.driver.connection.Connection conn:
+    :param aiogremlin.driver.pool.ConnectionPool pool:
     """
     def __init__(self, conn, pool):
         self._conn = conn
@@ -45,7 +45,7 @@ class PooledConnection:
         :param args: Keyword arguments for Gremlin Server. Depend on processor
             and op.
 
-        :returns: :py:class:`Response` object
+        :returns: :py:class:`aiohttp.ClientResponse` object
         """
         return await self._conn.write(message)
 

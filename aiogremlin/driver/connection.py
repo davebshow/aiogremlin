@@ -20,7 +20,7 @@ class Connection:
     """
     Main classd for interacting with the Gremlin Server. Encapsulates a
     websocket connection. Not instantiated directly. Instead use
-    :py:meth:`Connection.open<aiogremlin.connection.Connection.open>`.
+    :py:meth::`Connection.open<aiogremlin.driver.connection.Connection.open>`.
 
     :param str url: url for host Gremlin Server
     :param gremlin_python.driver.transport.AbstractBaseTransport transport:
@@ -71,7 +71,7 @@ class Connection:
         :param asyncio.BaseEventLoop loop:
         :param gremlin_python.driver.protocol.AbstractBaseProtocol protocol:
             Protocol implementation
-        :param func transport_factory: Factory function for transports
+        :param transport_factory: Factory function for transports
         :param ssl.SSLContext ssl_context:
         :param str username: Username for database auth
         :param str password: Password for database auth
@@ -82,7 +82,7 @@ class Connection:
         :param message_serializer: Message serializer implementation
         :param provider: Graph provider object implementation
 
-        :returns: :py:class:`Connection<aiogremlin.connection.Connection>`
+        :returns: :py:class:`Connection<aiogremlin.driver.connection.Connection>`
         """
         if not protocol:
             protocol = GremlinServerWSProtocol(message_serializer)

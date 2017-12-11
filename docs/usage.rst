@@ -37,8 +37,10 @@ by PEP 492::
     >>> async for vertex in g.V():
     ...     print(vertex)
 
-Furthermore, it implements several convience methods - :py:meth:`toList`,
-:py:meth:`toSet`, and :py:meth:`next`::
+Furthermore, it implements several convience methods -
+:py:meth:`toList<aiogremlin.process.graph_traversal.AsyncGraphTraversal.toList>`,
+:py:meth:`toSet<aiogremlin.process.graph_traversal.AsyncGraphTraversal.toSet>`,
+and :py:meth:`next<aiogremlin.process.graph_traversal.AsyncGraphTraversal.next>`::
 
     >>> vertex_list = await g.V().toList()
     >>> vertex_set = await g.V().toSet()
@@ -138,7 +140,7 @@ async interator protocol::
     ...     print(v)
 
 It also provides a convenience method
-:py:meth:`all<aiogremlin.driver.client.Client.all>`
+:py:meth:`all<aiogremlin.driver.resultset.ResultSet.all>`
 that aggregates and returns the result of the script in a :py:class:`list`::
 
     >>> results = await result_set.all()

@@ -30,6 +30,8 @@ aiogremlin\.driver\.cluster module
 aiogremlin\.driver\.connection module
 -------------------------------------
 
+.. autoclass:: gremlin_python.driver.protocol.AbstractBaseProtocol
+
 .. automodule:: aiogremlin.driver.connection
     :members:
     :undoc-members:

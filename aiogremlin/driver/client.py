@@ -8,11 +8,11 @@ from gremlin_python.process import traversal
 
 class Client:
     """
-    Client that utilizes a :py:class:`Cluster<aiogremlin.cluster.Cluster>`
+    Client that utilizes a :py:class:`Cluster<aiogremlin.driver.cluster.Cluster>`
     to access a cluster of Gremlin Server hosts. Issues requests to hosts using
     a round robin strategy.
 
-    :param aiogremlin.cluster.Cluster cluster: Cluster used by
+    :param aiogremlin.driver.cluster.Cluster cluster: Cluster used by
         client
     :param asyncio.BaseEventLoop loop:
     :param dict aliases: Optional mapping for aliases. Default is `None`
@@ -59,7 +59,7 @@ class Client:
         **coroutine** Submit a script and bindings to the Gremlin Server.
 
         :param message: Can be an instance of
-            `Message<gremlin_python.request.RequestMessage>` or
+            `RequestMessage<gremlin_python.driver.request.RequestMessage>` or
             `Bytecode<gremlin_python.process.traversal.Bytecode>`
             or a `str` representing a raw Gremlin script
         :param dict bindings: Optional bindings used with raw Grelmin
