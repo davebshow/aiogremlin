@@ -42,6 +42,7 @@ class GremlinServerWSProtocol(protocol.AbstractBaseProtocol):
             await func
 
     async def data_received(self, data, results_dict):
+        serializer_version = self._message_serializer.version
         data = data.decode('utf-8')
         message = json.loads(data)
         request_id = message['requestId']
@@ -50,11 +51,14 @@ class GremlinServerWSProtocol(protocol.AbstractBaseProtocol):
         msg = message['status']['message']
         if request_id in results_dict:
             result_set = results_dict[request_id]
-            meta_aggregate_to = message['result']['meta']['@value']
-            if len(meta_aggregate_to) > 1:
-                aggregate_to = meta_aggregate_to[1]
+            if serializer_version == b"application/vnd.gremlin-v2.0+json":
+                aggregate_to = data['result']['meta'].get('aggregateTo', 'list')
             else:
-                aggregate_to = 'list'
+                meta_aggregate_to = message['result']['meta']['@value']
+                if len(meta_aggregate_to) > 1:
+                    aggregate_to = meta_aggregate_to[1]
+                else:
+                    aggregate_to = 'list'
             result_set.aggregate_to = aggregate_to
 
             if status_code == 407:
@@ -68,7 +72,7 @@ class GremlinServerWSProtocol(protocol.AbstractBaseProtocol):
                 result_set.queue_result(None)
             else:
                 if data:
-                    if self._message_serializer.version == b"application/vnd.gremlin-v2.0+json":
+                    if serializer_version == b"application/vnd.gremlin-v2.0+json":
                         for result in data:
                             result = self._message_serializer.deserialize_message(result)
                             message = Message(status_code, result, msg)
