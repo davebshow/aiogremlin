@@ -21,21 +21,21 @@ Note that this *NOT* an official Apache project component, it is a
 
 Releases
 ========
-The latest release of :py:mod:`aiogremlin` is **3.2.6**.
+The latest release of :py:mod:`aiogremlin` is **3.3.1**.
 
 
 Requirements
 ============
 
-- Python 3.5+
-- TinkerPop 3.2.6
+- Python 3.5 +
+- TinkerPop 3.2.6 +
 
 
 Dependencies
 ============
-- aiohttp 2.2.5
-- gremlinpython 3.2.6
-- PyYAML 3.12
+- aiohttp 2.2.5 +
+- gremlinpython
+- PyYAML 3.12 +
 
 
 
@@ -43,11 +43,11 @@ Installation
 ============
 Install using pip::
 
-    $ pip install aiogremlin
+    $ pip install aiogremlin==<tinkerpop_version>
 
 For this version, a separate install of gremlinpython is required::
 
-    $ pip install gremlinpython==3.2.6 --no-deps
+    $ pip install gremlinpython==<tinkerpop_version> --no-deps
 
 
 Getting Started

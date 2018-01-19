@@ -1,4 +1,4 @@
-# [aiogremlin 3.2.4](https://pypi.python.org/pypi/aiogremlin/3.2.4)
+# [aiogremlin](https://pypi.python.org/pypi/aiogremlin/3.2.4)
 
 [Official Documentation](http://aiogremlin.readthedocs.org/en/latest/)
 
