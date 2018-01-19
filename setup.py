@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='aiogremlin',
-    version='3.2.6rc2',
+    version='3.2.6',
     url='',
     license='Apache Software License',
     author='davebshow',
@@ -18,10 +18,10 @@ setup(
               'aiogremlin.structure',
               'aiogremlin.remote'],
     install_requires=[
-        'aenum==1.4.5',  # required gremlinpython dep
-        'aiohttp==2.2.5',
-        'PyYAML==3.12',
-        'six==1.10.0'  # required gremlinpython dep
+        'aenum>=1.4.5',  # required gremlinpython dep
+        'aiohttp>=2.2.5',
+        'PyYAML>=3.12',
+        'six>=1.10.0'  # required gremlinpython dep
     ],
     test_suite='tests',
     setup_requires=['pytest-runner'],
