@@ -7,14 +7,13 @@
 aiogremlin
 ==========
 
-`aiogremlin` is a port of the official `Gremlin-Python` designed for integration with
+`aiogremlin` is an asynchronous DSL based on the official `Gremlin-Python` GLV designed for integration with
 event loop based asynchronous Python networking libraries, including `asyncio`_,
 `aiohttp`_, and `tornado`_. It uses the `async/await` syntax introduced
 in `PEP 492`_, and is therefore Python 3.5+ only.
 
 `aiogremlin` tries to follow `Gremlin-Python` as closely as possible both in terms
-of API and implementation. It is regularly rebased against the official Apache Git
-repository, and will be released according to the `TinkerPop`_ release schedule.
+of API and implementation. It is released according to the `TinkerPop`_ release schedule.
 
 Note that this *NOT* an official Apache project component, it is a
 *THIRD PARTY PACKAGE!*
