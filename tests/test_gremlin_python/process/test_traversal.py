@@ -19,16 +19,13 @@ under the License.
 '''THIS FILE HAS BEEN MODIFIED BY DAVID M. BROWN TO SUPPORT PEP 492'''
 __author__ = 'Marko A. Rodriguez (http://markorodriguez.com)'
 
-import unittest
-from unittest import TestCase
-
 from aiogremlin.structure.graph import Graph
 from gremlin_python.process.traversal import P
 from gremlin_python.process.traversal import Binding
 from gremlin_python.process.graph_traversal import __
 
 
-class TestTraversal(TestCase):
+class TestTraversal:
     def test_bytecode(self):
         g = Graph().traversal()
         bytecode = g.V().out("created").bytecode
@@ -85,7 +82,3 @@ class TestTraversal(TestCase):
         assert 0 == len(bytecode.bindings.keys())
         assert 0 == len(bytecode.source_instructions)
         assert 0 == len(bytecode.step_instructions)
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -19,15 +19,14 @@ under the License.
 '''THIS FILE HAS BEEN MODIFIED BY DAVID M. BROWN TO SUPPORT PEP 492'''
 __author__ = 'Marko A. Rodriguez (http://markorodriguez.com)'
 
-import unittest
-from unittest import TestCase
 
 from aiogremlin.structure.graph import Graph
 from gremlin_python.process.strategies import *
 from gremlin_python.process.graph_traversal import __
 
 
-class TestTraversalStrategies(TestCase):
+class TestTraversalStrategies:
+
     def test_singletons(self):
         g = Graph().traversal()
         bytecode = g.withStrategies(ReadOnlyStrategy()).bytecode
@@ -101,6 +100,3 @@ class TestTraversalStrategies(TestCase):
         strategy = bytecode.source_instructions[0][1]
         assert 1 == len(strategy.configuration)
         assert __.has("name","marko") == strategy.configuration["vertices"]
-
-if __name__ == '__main__':
-    unittest.main()

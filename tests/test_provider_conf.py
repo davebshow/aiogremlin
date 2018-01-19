@@ -26,7 +26,7 @@
 #
 # async def mock_receive():
 #     message = mock.Mock()
-#     message.tp = aiohttp.MsgType.close
+#     message.tp = aiohttp.WSMsgType.close
 #     return message
 #
 #

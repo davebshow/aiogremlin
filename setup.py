@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='aiogremlin',
-    version='3.2.6',
+    version='3.2.7',
     url='',
     license='Apache Software License',
     author='davebshow',
