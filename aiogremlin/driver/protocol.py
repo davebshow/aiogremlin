@@ -50,9 +50,13 @@ class GremlinServerWSProtocol(protocol.AbstractBaseProtocol):
         msg = message['status']['message']
         if request_id in results_dict:
             result_set = results_dict[request_id]
-            aggregate_to = message['result']['meta'].get('aggregateTo',
-                                                         'list')
+            meta_aggregate_to = message['result']['meta']['@value']
+            if len(meta_aggregate_to) > 1:
+                aggregate_to = meta_aggregate_to[1]
+            else:
+                aggregate_to = 'list'
             result_set.aggregate_to = aggregate_to
+
             if status_code == 407:
                 auth = b''.join([b'\x00', self._username.encode('utf-8'),
                                  b'\x00', self._password.encode('utf-8')])
@@ -64,10 +68,16 @@ class GremlinServerWSProtocol(protocol.AbstractBaseProtocol):
                 result_set.queue_result(None)
             else:
                 if data:
-                    for result in data:
-                        result = self._message_serializer.deserialize_message(result)
-                        message = Message(status_code, result, msg)
-                        result_set.queue_result(message)
+                    if self._message_serializer.version == b"application/vnd.gremlin-v2.0+json":
+                        for result in data:
+                            result = self._message_serializer.deserialize_message(result)
+                            message = Message(status_code, result, msg)
+                            result_set.queue_result(message)
+                    else:
+                        results = self._message_serializer.deserialize_message(data['@value'])
+                        for result in results:
+                            message = Message(status_code, result, msg)
+                            result_set.queue_result(message)
                 else:
                     data = self._message_serializer.deserialize_message(data)
                     message = Message(status_code, data, msg)
