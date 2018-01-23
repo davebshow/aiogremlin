@@ -38,6 +38,7 @@ class TestDriverRemoteConnection(object):
         statics.load_statics(globals())
         g = Graph().traversal().withRemote(remote_connection)
         result = await g.V().limit(1).toList()
+        await remote_connection.close()
 
     @pytest.mark.asyncio
     async def test_traversals(self, remote_connection):
