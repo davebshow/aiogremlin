@@ -1,3 +1,4 @@
+import asyncio
 import aiohttp
 
 from gremlin_python.driver import transport
@@ -18,8 +19,10 @@ class AiohttpTransport(transport.AbstractBaseTransport):
         self._ws = await self._client_session.ws_connect(url)
         self._connected = True
 
-    def write(self, message):
-        self._ws.send_bytes(message)
+    async def write(self, message):
+        coro = self._ws.send_bytes(message)
+        if asyncio.iscoroutine(coro):
+          await coro
 
     async def read(self):
         data = await self._ws.receive()
