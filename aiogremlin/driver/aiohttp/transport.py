@@ -26,16 +26,16 @@ class AiohttpTransport(transport.AbstractBaseTransport):
 
     async def read(self):
         data = await self._ws.receive()
-        if data.tp == aiohttp.WSMsgType.close:
+        if data.type == aiohttp.WSMsgType.close:
             await self._transport.close()
             raise RuntimeError("Connection closed by server")
-        elif data.tp == aiohttp.WSMsgType.error:
+        elif data.type == aiohttp.WSMsgType.error:
             # This won't raise properly, fix
             raise data.data
-        elif data.tp == aiohttp.WSMsgType.closed:
+        elif data.type == aiohttp.WSMsgType.closed:
             # Hmm
             raise RuntimeError("Connection closed by server")
-        elif data.tp == aiohttp.WSMsgType.text:
+        elif data.type == aiohttp.WSMsgType.text:
             # Should return bytes
             data = data.data.strip().encode('utf-8')
         else:
