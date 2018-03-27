@@ -1,3 +1,4 @@
+import asyncio
 import aiohttp
 
 from gremlin_python.driver import transport
@@ -18,21 +19,23 @@ class AiohttpTransport(transport.AbstractBaseTransport):
         self._ws = await self._client_session.ws_connect(url)
         self._connected = True
 
-    def write(self, message):
-        self._ws.send_bytes(message)
+    async def write(self, message):
+        coro = self._ws.send_bytes(message)
+        if asyncio.iscoroutine(coro):
+          await coro
 
     async def read(self):
         data = await self._ws.receive()
-        if data.tp == aiohttp.WSMsgType.close:
+        if data.type == aiohttp.WSMsgType.close:
             await self._transport.close()
             raise RuntimeError("Connection closed by server")
-        elif data.tp == aiohttp.WSMsgType.error:
+        elif data.type == aiohttp.WSMsgType.error:
             # This won't raise properly, fix
             raise data.data
-        elif data.tp == aiohttp.WSMsgType.closed:
+        elif data.type == aiohttp.WSMsgType.closed:
             # Hmm
             raise RuntimeError("Connection closed by server")
-        elif data.tp == aiohttp.WSMsgType.text:
+        elif data.type == aiohttp.WSMsgType.text:
             # Should return bytes
             data = data.data.strip().encode('utf-8')
         else:
